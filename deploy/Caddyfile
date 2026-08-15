@@ -1,0 +1,48 @@
+# La configuración del sitio vive en un fragmento porque se sirve por dos vías a la vez, y
+# duplicarla garantizaría que una de las dos quede desactualizada.
+(taskadmin) {
+	encode gzip zstd
+
+	# API y hub de SignalR van al backend. El hub necesita que Caddy no cierre la
+	# conexión: los WebSockets son de larga vida por diseño.
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle /hubs/* {
+		reverse_proxy api:8080
+	}
+
+	handle /health {
+		reverse_proxy api:8080
+	}
+
+	# El frontend es estático: Caddy lo sirve sin runtime.
+	#
+	# El `{path}.html` del medio es lo que hace que /manual sirva manual.html. Sin él, la ruta no
+	# existe como archivo, cae al index.html y se la come el router de la SPA — que no la conoce y
+	# redirige a la raíz. Con esta línea, cualquier página suelta que se deje en web/public queda
+	# accesible por su nombre sin extensión, y el resto sigue yendo a la aplicación.
+	handle {
+		root * /srv/web
+		try_files {path} {path}.html /index.html
+		file_server
+	}
+}
+
+# Cómo se llega desde la red: por IP o por el nombre del equipo, en HTTP plano.
+# `:80` responde a cualquier host, que es lo que hace falta cuando cada máquina entra por una
+# dirección distinta y no hay DNS interno. En un servidor expuesto, poner el dominio real acá
+# activa el TLS automático de Let's Encrypt.
+{$TASKADMIN_DOMAIN::80} {
+	import taskadmin
+}
+
+# Y por localhost con HTTPS, que es como quedó configurado el equipo donde corre.
+# No es un lujo: al servir HTTPS una vez, Caddy manda HSTS y el navegador recuerda que a este
+# host hay que pedirle HTTPS *siempre*. Si acá solo hubiera HTTP, `http://localhost` se
+# convertiría solo en `https://localhost` y no abriría nada.
+https://localhost {
+	tls internal
+	import taskadmin
+}

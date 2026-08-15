@@ -1,0 +1,137 @@
+# Todo el sistema corre acá adentro: base, API y frontend servido por Caddy.
+#
+#   docker compose up -d --build
+#
+# Después de eso la app está en http://localhost (o en TASKADMIN_DOMAIN con TLS automático).
+# No hace falta tener .NET ni Node instalados en la máquina que despliega.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskadmin-postgres
+    environment:
+      POSTGRES_DB: taskadmin
+      POSTGRES_USER: taskadmin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskadmin}
+    ports:
+      # Expuesto solo en loopback: en el VPS nadie llega a la base desde afuera.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskadmin -d taskadmin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: src/TaskAdmin.Api/Dockerfile
+    container_name: taskadmin-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=taskadmin;Username=taskadmin;Password=${POSTGRES_PASSWORD:-taskadmin}"
+
+      # Secretos por entorno, nunca en appsettings.json versionado.
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?definí JWT_SIGNING_KEY en .env}
+
+      # La sección que lee el código es AgentModel, no Anthropic. Con el nombre viejo la clave
+      # llegaba al contenedor y no la leía nadie: el agente caía al modelo guionado en producción
+      # sin decir por qué.
+      AgentModel__ApiKey: ${ANTHROPIC_API_KEY:-}
+
+      # Qué modelo atiende los check-ins. Con «openai-compatible» apunta a un modelo local
+      # (Ollama, LM Studio, vLLM); con «anthropic» a la API. Es un cambio de configuración, no
+      # de código: el mismo agente y las mismas nueve herramientas de los dos lados.
+      #
+      # OJO con la URL: la API corre acá adentro, y Ollama corre en el host. Desde el contenedor
+      # «localhost» es el contenedor mismo, así que hay que nombrar al host explícitamente.
+      AgentModel__Provider: ${AGENT_PROVIDER:-anthropic}
+      AgentModel__Model: ${AGENT_MODEL:-claude-opus-5}
+      AgentModel__BaseUrl: ${AGENT_BASE_URL:-}
+
+      # Material de cifrado de los secretos que se cargan desde la pantalla de Configuración.
+      # Si no se define cae en la clave de firma de los JWT, y entonces rotar esa clave vuelve
+      # ilegibles el SMTP y la clave del modelo. Separarlas es una línea y evita esa sorpresa.
+      Secrets__Key: ${SECRETS_KEY:-}
+
+      # El primer admin se crea solo si no hay ningún usuario. Sin esto, una instancia nueva
+      # arranca y queda inaccesible: no hay credenciales de fábrica a propósito.
+      Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      Bootstrap__OrganizationName: ${BOOTSTRAP_ORGANIZATION_NAME:-Mi organización}
+
+      # De cuántas empresas es esta instalación. Single es el modo on-premise: sin registro y sin
+      # consola de plataforma, la instalación entera es de quien la desplegó. Es un interruptor
+      # sobre el mismo código, no otra versión del producto.
+      Tenancy__Mode: ${TENANCY_MODE:-Single}
+      Tenancy__AllowRegistration: ${TENANCY_ALLOW_REGISTRATION:-true}
+      Tenancy__AllowedRegistrationDomains: ${TENANCY_ALLOWED_DOMAINS:-}
+
+      # Quien opera la instalación: da de alta organizaciones y las suspende. Deliberadamente no
+      # ve el contenido de ninguna — su cuenta vive en su propia organización y el filtro la acota
+      # igual que a cualquiera. Solo se crea en modo Multi.
+      Platform__OperatorEmail: ${PLATFORM_OPERATOR_EMAIL:-}
+      Platform__OperatorPassword: ${PLATFORM_OPERATOR_PASSWORD:-}
+
+      # Base de los enlaces de los emails. Apuntar a localhost en un servidor real deja a la
+      # gente con enlaces que no abren nada.
+      Notifications__PublicBaseUrl: ${PUBLIC_BASE_URL:-http://localhost}
+
+      # Con Caddy adelante, el front y la API comparten origen y CORS deja de hacer falta; se
+      # declara igual para quien sirva el frontend desde otro lado.
+      Cors__Origins__0: ${PUBLIC_BASE_URL:-http://localhost}
+      # El dev server de Vite y la app de escritorio hablan con la API publicada en loopback.
+      Cors__Origins__1: http://localhost:5173
+    ports:
+      # Solo en loopback: en el VPS nadie llega a la API sin pasar por Caddy. Sirve para apuntarle
+      # el dev server del frontend o la app de escritorio a esta misma instancia.
+      - "127.0.0.1:5102:8080"
+    extra_hosts:
+      # Para llegar a un Ollama o LM Studio que corre en la máquina y no en un contenedor.
+      # Docker Desktop ya resuelve host.docker.internal; en Linux hay que declararlo, y sin esto
+      # «localhost:11434» desde adentro del contenedor es el contenedor mismo.
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Sin estos dos volúmenes, cada `docker compose build` se lleva puestos los entregables
+      # subidos y los emails del modo disco: viven adentro del contenedor, que es efímero.
+      - uploads:/app/uploads
+      - outbox:/app/outbox
+    healthcheck:
+      # wget viene en busybox, así que no hace falta agregar curl a la imagen runtime.
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 40s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    container_name: taskadmin-web
+    environment:
+      TASKADMIN_DOMAIN: ${TASKADMIN_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:
+  outbox:
+  caddy_data:
+  caddy_config:

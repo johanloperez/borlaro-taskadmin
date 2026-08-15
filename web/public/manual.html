@@ -1,0 +1,1327 @@
+<title>Manual de TaskAdmin</title>
+<style>
+  /* ── Tokens ────────────────────────────────────────────────────────────────
+     La paleta sale del propio producto: fondos carbón cálido, grises tibios y
+     el verde-agua del acento. El manual tiene que leerse como parte de
+     TaskAdmin, no como un documento de otra procedencia.
+
+     :root define el tema CLARO completo. Los dos bloques de abajo solo
+     redefinen tokens. Ningún color se declara únicamente dentro de un bloque
+     de tema — si lo hiciera, no aplicaría cuando el visor está en «sistema». */
+  :root {
+    --paper:      #FAF8F4;
+    --surface:    #F2EEE7;
+    --surface-2:  #E9E4DA;
+    --ink:        #17150F;
+    --ink-soft:   #4A453C;
+    --ink-muted:  #756E62;
+    --line:       #DED6C9;
+    --line-soft:  #EAE3D8;
+    --accent:     #0E6F66;
+    --accent-ink: #FFFFFF;
+    --accent-dim: #D8EDE9;
+    --warn:       #9A5B14;
+    --warn-bg:    #FBF0DF;
+    --danger:     #A03330;
+    --danger-bg:  #FBE9E7;
+    --good:       #14664A;
+    --good-bg:    #E1F1E9;
+    --code-bg:    #EDE8DF;
+
+    --stage-backlog:  #9C9488;
+    --stage-todo:     #3E6B9E;
+    --stage-progress: #0E6F66;
+    --stage-blocked:  #A03330;
+    --stage-review:   #7A5AA8;
+    --stage-done:     #14664A;
+
+    --display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    --body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #14130F;
+      --surface:    #1C1A17;
+      --surface-2:  #232019;
+      --ink:        #F5F2ED;
+      --ink-soft:   #C9C2B6;
+      --ink-muted:  #A49E94;
+      --line:       #302C26;
+      --line-soft:  #262320;
+      --accent:     #2DD4BF;
+      --accent-ink: #0B1211;
+      --accent-dim: #16302E;
+      --warn:       #E4A855;
+      --warn-bg:    #2A2114;
+      --danger:     #F08A85;
+      --danger-bg:  #2C1917;
+      --good:       #6EE7B7;
+      --good-bg:    #14291F;
+      --code-bg:    #201D18;
+
+      --stage-backlog:  #A49E94;
+      --stage-todo:     #7BA7D6;
+      --stage-progress: #2DD4BF;
+      --stage-blocked:  #F08A85;
+      --stage-review:   #B79BE0;
+      --stage-done:     #6EE7B7;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #14130F;
+    --surface:    #1C1A17;
+    --surface-2:  #232019;
+    --ink:        #F5F2ED;
+    --ink-soft:   #C9C2B6;
+    --ink-muted:  #A49E94;
+    --line:       #302C26;
+    --line-soft:  #262320;
+    --accent:     #2DD4BF;
+    --accent-ink: #0B1211;
+    --accent-dim: #16302E;
+    --warn:       #E4A855;
+    --warn-bg:    #2A2114;
+    --danger:     #F08A85;
+    --danger-bg:  #2C1917;
+    --good:       #6EE7B7;
+    --good-bg:    #14291F;
+    --code-bg:    #201D18;
+
+    --stage-backlog:  #A49E94;
+    --stage-todo:     #7BA7D6;
+    --stage-progress: #2DD4BF;
+    --stage-blocked:  #F08A85;
+    --stage-review:   #B79BE0;
+    --stage-done:     #6EE7B7;
+  }
+
+  /* ── Base ──────────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  code, kbd {
+    font-family: var(--mono);
+    font-size: 0.875em;
+    background: var(--code-bg);
+    padding: 0.12em 0.38em;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* ── Encabezado ────────────────────────────────────────────────────────── */
+  .top {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .top-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 44px 28px 38px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(2.1rem, 5vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+    font-weight: 600;
+  }
+  .lede {
+    font-family: var(--display);
+    font-size: clamp(1.05rem, 2vw, 1.24rem);
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 60ch;
+    margin: 0;
+  }
+
+  /* ── Estructura ────────────────────────────────────────────────────────── */
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+    display: grid;
+    gap: 52px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 1000px) {
+    .shell {
+      grid-template-columns: 236px minmax(0, 1fr);
+      gap: 64px;
+      align-items: start;
+    }
+  }
+
+  /* ── Índice ────────────────────────────────────────────────────────────── */
+  .toc-mobile {
+    margin-top: 32px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 0 16px;
+  }
+  .toc-mobile summary {
+    cursor: pointer;
+    padding: 14px 0;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .toc-mobile ol { padding-bottom: 8px; }
+  @media (min-width: 1000px) { .toc-mobile { display: none; } }
+
+  .toc-rail { display: none; }
+  @media (min-width: 1000px) {
+    .toc-rail {
+      display: block;
+      position: sticky;
+      top: 28px;
+      padding-top: 52px;
+      max-height: calc(100vh - 56px);
+      overflow-y: auto;
+    }
+  }
+  .toc-title {
+    font-size: 11px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  .toc-rail ol, .toc-mobile ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: toc;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .toc-rail li, .toc-mobile li { counter-increment: toc; }
+  .toc-rail a, .toc-mobile a {
+    display: flex;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 13.5px;
+    line-height: 1.35;
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .toc-rail a::before, .toc-mobile a::before {
+    content: counter(toc);
+    color: var(--ink-muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding-top: 2px;
+    min-width: 1.4em;
+    font-variant-numeric: tabular-nums;
+  }
+  .toc-rail a:hover, .toc-mobile a:hover { color: var(--accent); }
+
+  /* ── Secciones ─────────────────────────────────────────────────────────── */
+  main { counter-reset: sec; min-width: 0; }
+
+  section {
+    padding-top: 52px;
+    scroll-margin-top: 24px;
+  }
+  section > * { max-width: var(--measure); }
+
+  h2 {
+    counter-increment: sec;
+    font-family: var(--display);
+    font-size: clamp(1.5rem, 3vw, 1.92rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    font-weight: 600;
+    text-wrap: balance;
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+  }
+  h2::before {
+    content: counter(sec);
+    font-family: var(--mono);
+    font-size: 0.62em;
+    color: var(--accent);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .sub {
+    color: var(--ink-muted);
+    font-size: 14.5px;
+    margin: 0 0 22px 0;
+    padding-left: 2px;
+  }
+  h3 {
+    font-family: var(--body);
+    font-size: 1.02rem;
+    font-weight: 650;
+    margin: 34px 0 8px;
+    letter-spacing: -0.005em;
+  }
+  p { margin: 0 0 15px; }
+  strong { font-weight: 650; }
+
+  ul, ol.steps { margin: 0 0 16px; padding-left: 1.15em; }
+  li { margin-bottom: 7px; }
+  ol.steps { padding-left: 1.3em; }
+  ol.steps > li { padding-left: 4px; }
+  ol.steps > li::marker { color: var(--accent); font-weight: 650; }
+
+  /* ── Tablas ────────────────────────────────────────────────────────────── */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin: 0 0 20px;
+    max-width: var(--measure);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  th {
+    background: var(--surface);
+    font-weight: 650;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+  .yes { color: var(--good); font-weight: 650; }
+  .no  { color: var(--ink-muted); }
+
+  /* ── Avisos ────────────────────────────────────────────────────────────── */
+  .note {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-dim);
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 0 0 20px;
+    max-width: var(--measure);
+    font-size: 15px;
+  }
+  .note.warn   { border-left-color: var(--warn);   background: var(--warn-bg); }
+  .note.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+  .note p:last-child { margin-bottom: 0; }
+  .note-label {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--accent);
+  }
+  .note.warn .note-label   { color: var(--warn); }
+  .note.danger .note-label { color: var(--danger); }
+
+  /* ── Chips de etapa ────────────────────────────────────────────────────── */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; padding: 0; list-style: none; max-width: var(--measure); }
+  .chips li { margin: 0; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    padding: 4px 11px 4px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+  /* ── Bloques de código ─────────────────────────────────────────────────── */
+  pre {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 13px 16px;
+    overflow-x: auto;
+    margin: 0 0 20px;
+    max-width: var(--measure);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* ── Listas de definición (ajustes) ────────────────────────────────────── */
+  dl.settings { margin: 0 0 22px; max-width: var(--measure); }
+  dl.settings dt {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--accent);
+    margin-top: 15px;
+    font-weight: 500;
+  }
+  dl.settings dd { margin: 3px 0 0; font-size: 14.5px; color: var(--ink-soft); }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 56px 0 0;
+    max-width: var(--measure);
+  }
+
+  footer {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 34px 28px 60px;
+    color: var(--ink-muted);
+    font-size: 13px;
+    border-top: 1px solid var(--line);
+  }
+  footer p { max-width: var(--measure); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <p class="eyebrow">Manual de uso y administración</p>
+    <h1>TaskAdmin</h1>
+    <p class="lede">
+      Un tablero de trabajo con un agente que conversa. Todos los días le pregunta a cada
+      persona cómo viene lo suyo, y con lo que le cuenta deja el tablero al día — para que
+      nadie tenga que actualizar tarjetas a mano.
+    </p>
+  </div>
+</header>
+
+<div class="shell">
+
+  <details class="toc-mobile">
+    <summary>Contenido del manual</summary>
+    <ol>
+      <li><a href="#idea">La idea en dos minutos</a></li>
+      <li><a href="#roles">Roles: quién puede qué</a></li>
+      <li><a href="#entrar">Entrar y crear la cuenta</a></li>
+      <li><a href="#proyectos">Plantillas y proyectos</a></li>
+      <li><a href="#tablero">El tablero</a></li>
+      <li><a href="#relevo">Responsable por etapa</a></li>
+      <li><a href="#checkin">El check-in y el agente</a></li>
+      <li><a href="#propuestas">Propuestas del agente</a></li>
+      <li><a href="#avisos">Avisos y la escalera</a></li>
+      <li><a href="#escritorio">La app de escritorio</a></li>
+      <li><a href="#actividad">Actividad y mensajes</a></li>
+      <li><a href="#formulario">El formulario público</a></li>
+      <li><a href="#config">Configuración</a></li>
+      <li><a href="#personas">Personas</a></li>
+      <li><a href="#operador">La consola de operador</a></li>
+      <li><a href="#idiomas">Idiomas</a></li>
+      <li><a href="#problemas">Cuando algo no anda</a></li>
+    </ol>
+  </details>
+
+  <nav class="toc-rail" aria-label="Contenido del manual">
+    <p class="toc-title">Contenido</p>
+    <ol>
+      <li><a href="#idea">La idea en dos minutos</a></li>
+      <li><a href="#roles">Roles: quién puede qué</a></li>
+      <li><a href="#entrar">Entrar y crear la cuenta</a></li>
+      <li><a href="#proyectos">Plantillas y proyectos</a></li>
+      <li><a href="#tablero">El tablero</a></li>
+      <li><a href="#relevo">Responsable por etapa</a></li>
+      <li><a href="#checkin">El check-in y el agente</a></li>
+      <li><a href="#propuestas">Propuestas del agente</a></li>
+      <li><a href="#avisos">Avisos y la escalera</a></li>
+      <li><a href="#escritorio">La app de escritorio</a></li>
+      <li><a href="#actividad">Actividad y mensajes</a></li>
+      <li><a href="#formulario">El formulario público</a></li>
+      <li><a href="#config">Configuración</a></li>
+      <li><a href="#personas">Personas</a></li>
+      <li><a href="#operador">La consola de operador</a></li>
+      <li><a href="#idiomas">Idiomas</a></li>
+      <li><a href="#problemas">Cuando algo no anda</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="idea">
+      <h2>La idea en dos minutos</h2>
+      <p class="sub">Qué hace distinto a TaskAdmin de cualquier otro tablero.</p>
+
+      <p>
+        En cualquier herramienta de trabajo el tablero está desactualizado. No porque a la
+        gente no le importe, sino porque actualizar tarjetas es trabajo que no produce nada:
+        se hace al final del día, apurado, o no se hace.
+      </p>
+      <p>
+        TaskAdmin da vuelta ese orden. <strong>Un agente conversa con cada persona</strong> —
+        treinta segundos, cinco turnos como máximo — y de esa charla salen los cambios del
+        tablero. La persona cuenta en qué anda; el agente mueve la etapa, registra el avance,
+        deja anotado el bloqueo y avisa a quien corresponda.
+      </p>
+
+      <h3>Las tres piezas</h3>
+      <ul>
+        <li>
+          <strong>El tablero.</strong> Proyectos con etapas propias de cada disciplina, tareas
+          con campos propios, y reglas de qué puede pasar a qué.
+        </li>
+        <li>
+          <strong>El agente.</strong> Habla con cada persona y escribe en el tablero por ella.
+          Lo rutinario lo aplica solo; lo que compromete a alguien más lo propone.
+        </li>
+        <li>
+          <strong>El canal.</strong> La app de escritorio y el correo, con una escalera que
+          insiste hasta que alguien abre el check-in.
+        </li>
+      </ul>
+
+      <div class="note">
+        <span class="note-label">Lo importante</span>
+        <p>
+          El agente no decide nada que no pueda deshacerse solo. Mover una fecha comprometida
+          o crear trabajo nuevo <strong>no lo aplica</strong>: lo deja como propuesta, y una
+          persona decide. Todo lo que toca queda registrado en Actividad con su nombre y
+          ligado a la conversación que lo originó.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="roles">
+      <h2>Roles: quién puede qué</h2>
+      <p class="sub">Hay dos capas que se combinan: el rol en la organización y el rol en cada proyecto.</p>
+
+      <h3>Rol en la organización</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Rol</th>
+              <th>Qué puede</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Administrador</strong></td>
+              <td>
+                Configura la organización, gestiona su gente y sus plantillas, y entra a
+                cualquier proyecto de la organización sin ser miembro. <strong>No ve nada de
+                otras organizaciones.</strong>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Líder de equipo</strong></td>
+              <td>
+                Crea proyectos y queda como líder de los que crea. Ve el panorama de toda la
+                organización. Sobre un proyecto que no lidera, es un miembro más.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Colaborador</strong></td>
+              <td>
+                Trabaja en los proyectos de los que es miembro. Puede liderar uno sin ser
+                líder de equipo: liderar un proyecto es una responsabilidad, no un ascenso.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Cliente o revisor</strong></td>
+              <td>Ve y aprueba lo suyo. No crea ni edita trabajo.</td>
+            </tr>
+            <tr>
+              <td><strong>Operador de la plataforma</strong></td>
+              <td>
+                Da de alta organizaciones, las suspende y las reactiva. <strong>No ve el
+                contenido de ninguna</strong> — ni proyectos, ni tareas, ni conversaciones.
+                Ver <a href="#operador">la consola de operador</a>.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Rol en un proyecto</h3>
+      <p>
+        Sobre cada proyecto, una persona es <strong>miembro</strong> o <strong>líder</strong>.
+        El miembro crea, edita y mueve trabajo. El líder además arma el equipo, abre el
+        formulario público, define el responsable de cada etapa y resuelve las propuestas del
+        agente sobre ese tablero.
+      </p>
+
+      <div class="note">
+        <span class="note-label">Participar es tener trabajo</span>
+        <p>
+          El equipo de un proyecto no sale de una lista que alguien mantiene: sale de quién
+          tiene trabajo asignado, quién revisa y quién lidera. Por eso no puede desincronizarse
+          de la realidad — y por eso no hay que dar de alta a nadie en un proyecto: asignale
+          una tarea y ya participa.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="entrar">
+      <h2>Entrar y crear la cuenta</h2>
+      <p class="sub">Hay tres caminos, y cuáles están abiertos depende de cómo se desplegó la instalación.</p>
+
+      <h3>Si tu empresa ya está en la plataforma</h3>
+      <p>
+        Alguien con rol de administrador te crea el usuario desde <strong>Personas</strong> y te
+        pasa una contraseña inicial. Entrás con tu email y esa contraseña, y la cambiás desde tu
+        perfil.
+      </p>
+      <p>
+        Si la instalación tiene un proveedor externo configurado (Google u otro OpenID), el botón
+        de ese proveedor aparece en la pantalla de entrada. En ese caso no hace falta contraseña:
+        alcanza con que tu email coincida con el de tu usuario.
+      </p>
+
+      <h3>Si tu empresa todavía no está</h3>
+      <p>
+        En la pantalla de entrada, <strong>«Crear la cuenta de mi empresa»</strong>. Dos formas:
+      </p>
+      <ol class="steps">
+        <li>
+          <strong>Con tu email.</strong> Poné el nombre de la empresa, tu nombre, tu email de
+          trabajo y una contraseña. Te llega un correo con un enlace; la organización se crea
+          cuando hacés clic. El enlace vence en 24 horas.
+        </li>
+        <li>
+          <strong>Con tu cuenta del proveedor.</strong> Un paso menos: no hay email que confirmar
+          ni contraseña que elegir. Entrás, te pide el nombre de la empresa, y listo.
+        </li>
+      </ol>
+      <p>
+        En cualquiera de los dos casos quedás como administrador de tu organización, con las
+        cinco plantillas de disciplina listas para usar.
+      </p>
+
+      <h3>El logo de tu empresa</h3>
+      <p>
+        Al crear la organización podés cargar su logo — PNG, JPG, GIF, WebP o SVG, hasta 2 MB.
+        Aparece en el encabezado, junto al nombre, en la pantalla de toda tu gente. Si no cargás
+        ninguno, se muestra solo el nombre.
+      </p>
+      <div class="note warn">
+        <span class="note-label">Se carga una sola vez</span>
+        <p>
+          Por ahora el logo se define al crear la organización y no se puede cambiar después. Si
+          te equivocaste o cambió la marca, hablá con quien opera la instalación.
+        </p>
+      </div>
+
+      <div class="note warn">
+        <span class="note-label">Instalaciones cerradas</span>
+        <p>
+          Quien despliega la plataforma puede apagar el registro por cuenta propia. Es lo normal
+          en una instalación de una sola empresa: entonces no hay botón de crear cuenta, y los
+          usuarios los crea el administrador. También puede limitarse el alta a dominios de
+          correo concretos.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="proyectos">
+      <h2>Plantillas y proyectos</h2>
+      <p class="sub">Una plantilla define cómo trabaja una disciplina. Un proyecto es una copia suya que ya vive por su cuenta.</p>
+
+      <h3>Las cinco plantillas de fábrica</h3>
+      <p>
+        Cada organización nace con cinco. No son temas visuales: cada una trae sus etapas, sus
+        reglas de transición, su vocabulario y sus campos.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Plantilla</th><th>Etapas</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Desarrollo de software</strong></td>
+              <td>Backlog · Por hacer · En curso · Bloqueado · En revisión · QA · Hecho</td>
+            </tr>
+            <tr>
+              <td><strong>Diseño</strong></td>
+              <td>Brief · En cola · Diseñando · Bloqueado · Revisión interna · Revisión cliente · Ajustes · Aprobado</td>
+            </tr>
+            <tr>
+              <td><strong>Edición de video</strong></td>
+              <td>Brief · Guion · Rodaje · Edición · Revisión · Publicado (y las suyas)</td>
+            </tr>
+            <tr>
+              <td><strong>Contenido</strong></td>
+              <td>Idea · Investigación · Redacción · Bloqueado · Edición · Aprobación · Programado · Publicado</td>
+            </tr>
+            <tr>
+              <td><strong>Genérico</strong></td>
+              <td>Para lo que no encaja en ninguna de las otras cuatro</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Por qué el vocabulario importa</h3>
+      <p>
+        Cada plantilla define cómo se llama una unidad de trabajo — «tarea», «pieza»,
+        «contenido» — y el agente usa ese vocabulario cuando conversa. A quien edita video no le
+        habla de <em>sprints</em>. Es la diferencia entre un asistente que suena del oficio y uno
+        que suena a software.
+      </p>
+
+      <h3>Crear un proyecto</h3>
+      <ol class="steps">
+        <li>En <strong>Proyectos</strong>, «Nuevo proyecto».</li>
+        <li>Elegí la plantilla que más se parezca a cómo trabajan.</li>
+        <li>Poné una <strong>clave</strong> corta — <code>DEV</code>, <code>VIDEO</code> — que
+          va a prefijar cada tarea (<code>DEV-142</code>), y un nombre.</li>
+        <li>Elegí quién lo lidera.</li>
+      </ol>
+      <p>
+        Desde ese momento el proyecto es independiente: cambiarle una etapa a la plantilla no
+        toca los proyectos que ya existen, y tocar el proyecto no altera la plantilla.
+      </p>
+
+      <h3>Editar plantillas</h3>
+      <p>
+        En <strong>Plantillas</strong> podés cambiar las de fábrica o crear las propias: etapas,
+        qué transición se permite, qué etapa exige un motivo de bloqueo, qué etapa abre una ronda
+        de revisión, y los campos personalizados de la disciplina.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="tablero">
+      <h2>El tablero</h2>
+      <p class="sub">Columnas por etapa, tarjetas por tarea, y reglas que el agente tampoco puede saltarse.</p>
+
+      <h3>Las categorías de etapa</h3>
+      <p>
+        Cada etapa, se llame como se llame, pertenece a una categoría. Es lo que le permite al
+        sistema entender un tablero que nunca vio:
+      </p>
+      <ul class="chips">
+        <li><span class="chip"><span class="dot" style="background: var(--stage-backlog)"></span>Backlog</span></li>
+        <li><span class="chip"><span class="dot" style="background: var(--stage-todo)"></span>Por hacer</span></li>
+        <li><span class="chip"><span class="dot" style="background: var(--stage-progress)"></span>En curso</span></li>
+        <li><span class="chip"><span class="dot" style="background: var(--stage-blocked)"></span>Bloqueado</span></li>
+        <li><span class="chip"><span class="dot" style="background: var(--stage-review)"></span>En revisión</span></li>
+        <li><span class="chip"><span class="dot" style="background: var(--stage-done)"></span>Hecho</span></li>
+      </ul>
+
+      <h3>Mover una tarea</h3>
+      <p>
+        Arrastrando la tarjeta, o desde el selector de etapa en el panel de detalle — que además
+        es el camino accesible con teclado. Dos reglas:
+      </p>
+      <ul>
+        <li>
+          <strong>Solo las transiciones permitidas.</strong> Si la plantilla dice que de «Backlog»
+          solo se pasa a «Por hacer», el resto se rechaza. Vale para las personas y para el
+          agente por igual.
+        </li>
+        <li>
+          <strong>Podés mover lo tuyo; el resto lo mueve el líder.</strong> Salvo que el líder
+          habilite lo contrario en una tarea puntual.
+        </li>
+      </ul>
+
+      <h3>Etapas con comportamiento</h3>
+      <ul>
+        <li>
+          <strong>Etapa de bloqueo.</strong> Al entrar exige un motivo, y queda contada como
+          bloqueada hasta que salga. Al salir, el bloqueo se cierra solo.
+        </li>
+        <li>
+          <strong>Etapa de revisión.</strong> Al entrar abre una ronda: quien revisa aprueba o
+          devuelve con comentarios.
+        </li>
+        <li>
+          <strong>Etapa final.</strong> Cierra la tarea y le pone el avance en 100%.
+        </li>
+      </ul>
+
+      <h3>Campos personalizados</h3>
+      <p>
+        Cada proyecto define los suyos: texto, número, fecha o lista de opciones. Y cada campo
+        puede llevar una <strong>pista para el agente</strong>, que es lo que le explica cuándo
+        preguntarlo. Sin la pista, el agente ve el campo pero no sabe qué lo justifica.
+      </p>
+
+      <h3>Se actualiza solo</h3>
+      <p>
+        Si otra persona — o el agente — mueve algo mientras tenés el tablero abierto, aparece en
+        tu pantalla sin refrescar. Lo mismo con los contadores del panel del equipo.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="relevo">
+      <h2>Responsable por etapa</h2>
+      <p class="sub">El relevo: cuando el trabajo cambia de manos, quien lo recibe se entera.</p>
+
+      <p>
+        En cualquier flujo con varias personas, <strong>el tiempo se pierde en los pases</strong>.
+        Una tarea llega a «Edición» y nadie le avisa a quien edita: se queda quieta mientras todos
+        creen que avanza. Es la peor clase de demora porque es invisible.
+      </p>
+
+      <h3>Cómo se configura</h3>
+      <p>
+        <strong>En el encabezado de cada columna del tablero.</strong> Debajo del nombre de la
+        etapa dice a quién le pasa el trabajo que llegue ahí — o «acá no se hace cargo nadie» si
+        todavía no elegiste—. Quien lidera el proyecto hace clic y elige de la lista del equipo.
+      </p>
+      <p>
+        Se define <strong>una vez por etapa</strong>, no en cada tarea. Por ejemplo: «Redacción →
+        Ana», «Edición → Lucía». Desde ese momento, toda tarea que caiga ahí se le asigna a esa
+        persona y se le avisa.
+      </p>
+      <p>
+        El resto del equipo lo ve pero no lo edita: saber a quién le va a llegar lo que uno
+        termina no es información reservada.
+      </p>
+      <p>
+        Se configura en la etapa y no en cada tarea a propósito: si hubiera que elegir un
+        responsable por etapa en cada tarjeta nueva, nadie lo sostendría, y a la semana los
+        avisos irían a la persona equivocada — que es peor que no tenerlos.
+      </p>
+
+      <h3>La excepción</h3>
+      <p>
+        Si una tarea puntual la tiene que hacer otra persona, reasignala a mano. Esa asignación
+        manda sobre el responsable de la etapa.
+      </p>
+
+      <h3>Cuándo avisa y cuándo no</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Situación</th><th>Qué pasa</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>La tarea cambia de manos</td>
+              <td><span class="yes">Avisa</span> — es lo que quien recibe no puede adivinar</td>
+            </tr>
+            <tr>
+              <td>Sigue con la misma persona</td>
+              <td><span class="no">No avisa</span> — acaba de hacerlo, ya lo sabe</td>
+            </tr>
+            <tr>
+              <td>La etapa no define responsable</td>
+              <td><span class="no">No cambia de manos</span> — correcto para etapas de tránsito como «Bloqueado»</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="note-label">Un relevo no es un check-in</span>
+        <p>
+          El aviso de relevo no insiste ni escala. Un check-in sin responder significa algo — por
+          eso sube a correo y termina avisando al responsable. Que no abras un «te llegó esto» en
+          45 minutos significa que estás trabajando en otra cosa, que es lo normal.
+        </p>
+      </div>
+
+      <div class="note warn">
+        <span class="note-label">Si el responsable ya no está</span>
+        <p>
+          Si la persona que figuraba en una etapa queda desactivada, la tarea llega
+          <strong>sin asignar</strong> — visible en el tablero — y se avisa a los
+          administradores. Nunca se apila trabajo en silencio sobre una cuenta que ya no se usa.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="checkin">
+      <h2>El check-in y el agente</h2>
+      <p class="sub">Treinta segundos, cinco turnos, y el tablero queda al día.</p>
+
+      <h3>Cómo es la conversación</h3>
+      <p>
+        El agente <strong>nunca abre con «¿cómo vas?»</strong>. Abre con datos: nombra la tarea,
+        su etapa, hace cuánto no se mueve y su fecha, y pregunta sobre eso. Vos contestás en tus
+        palabras y él registra.
+      </p>
+      <pre><code>Agente   DEV-142 «Integrar pasarela de cobro» está en curso
+         desde hace 3 días y vence el 14. ¿Cómo va?
+
+Vos      avancé al 60% pero estoy trabado esperando que
+         Marcos me habilite staging
+
+Agente   Anotado. Le aviso a Marcos y queda registrado el
+         bloqueo.</code></pre>
+      <p>
+        De esa respuesta salieron dos cambios en el tablero: el avance al 60% y el bloqueo con el
+        nombre de quien lo destraba. Nadie tocó una tarjeta.
+      </p>
+
+      <h3>Qué puede hacer el agente</h3>
+      <p>Nueve cosas, y ninguna más:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Acción</th><th>Se aplica</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Leer tu trabajo asignado</td><td><span class="yes">sola</span></td></tr>
+            <tr><td>Mover una tarea de etapa</td><td><span class="yes">sola</span></td></tr>
+            <tr><td>Registrar avance y una nota</td><td><span class="yes">sola</span></td></tr>
+            <tr><td>Actualizar un campo del proyecto</td><td><span class="yes">sola</span></td></tr>
+            <tr><td>Marcar un bloqueo y de quién se espera</td><td><span class="yes">sola</span></td></tr>
+            <tr><td>Reordenar tus prioridades del día</td><td><span class="yes">sola</span></td></tr>
+            <tr><td>Levantar una alerta al responsable</td><td><span class="yes">sola</span></td></tr>
+            <tr><td><strong>Proponer mover una fecha</strong></td><td><span class="no">necesita aprobación</span></td></tr>
+            <tr><td><strong>Proponer una tarea nueva</strong></td><td><span class="no">necesita aprobación</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        El corte no es arbitrario: lo rutinario se aplica, y lo que <strong>compromete a otra
+        persona</strong> — una fecha pactada, carga de trabajo nueva — se propone.
+      </p>
+
+      <h3>Qué hace cuando no entiende</h3>
+      <p>
+        Pregunta de nuevo. Si le decís «lo de ayer quedó a medias» y tenés tres tareas abiertas,
+        <strong>no adivina</strong>: te pregunta cuál. Y si mencionás algo que no está en el
+        tablero, tampoco se lo cuelga a la tarea que tenga más a mano — te pregunta, o lo propone
+        como tarea nueva.
+      </p>
+      <p>
+        Si igual se equivoca — pide una etapa que no existe, un identificador inventado — el
+        sistema lo rechaza con el detalle del error, y el agente corrige y sigue. Nunca escribe un
+        dato inválido.
+      </p>
+
+      <h3>Cuándo escribe</h3>
+      <p>Lo elige quien administra, en Configuración:</p>
+      <ul>
+        <li>
+          <strong>Diario.</strong> Todos los días laborables a quien tenga trabajo abierto.
+        </li>
+        <li>
+          <strong>Cuando hace falta.</strong> Solo si hay algo que lo justifique: una tarea
+          vencida, una bloqueada, o una quieta hace demasiados días.
+        </li>
+      </ul>
+      <p>
+        Es la diferencia entre un ritual y una intervención — y lo segundo se ignora menos.
+      </p>
+
+      <h3>La salida rápida</h3>
+      <p>
+        <strong>«Sin cambios hoy»</strong> cierra el check-in en un clic. Es una salida legítima
+        y está a propósito: sin ella, la gente cierra la ventana y el dato se pierde igual, pero
+        el sistema no se entera de que preguntó.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="propuestas">
+      <h2>Propuestas del agente</h2>
+      <p class="sub">Lo que no se aplica solo espera a que una persona decida.</p>
+
+      <p>
+        En <strong>Propuestas</strong> aparece lo que el agente sugirió y no aplicó: cambios de
+        fecha y tareas nuevas. Cada una muestra de qué check-in salió y de quién.
+      </p>
+      <p>
+        Las resuelve quien lidera el proyecto: <strong>aprobar</strong> aplica el cambio en el
+        acto, <strong>rechazar</strong> pide un motivo que queda registrado. Ese motivo no es
+        burocracia: es lo que le permite a la próxima persona entender por qué esa fecha no se
+        movió.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="avisos">
+      <h2>Avisos y la escalera</h2>
+      <p class="sub">Un check-in no es «mandar una notificación y olvidarse».</p>
+
+      <p>
+        Cuando hay un check-in para alguien, el sistema insiste por canales cada vez más
+        molestos hasta que la persona <strong>lo abre</strong>. Y lo que detiene la escalera es
+        abrirlo, no recibirlo: que el aviso se haya mostrado no significa que alguien lo vio.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Peldaño</th><th>Por dónde</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Primer aviso</td><td>App de escritorio</td></tr>
+            <tr><td>Segundo aviso</td><td>App de escritorio</td></tr>
+            <tr><td>Tercero</td><td>Correo</td></tr>
+            <tr><td>Cuarto</td><td>Correo, y aparece en el panel del responsable</td></tr>
+            <tr><td>Último</td><td>Se marca como perdido y se avisa al responsable</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Los minutos de cada peldaño se configuran. Y si la app de escritorio no está corriendo,
+        los dos primeros peldaños <strong>se saltan</strong>: no tiene sentido esperar una hora un
+        acuse que nunca va a llegar, así que va directo al correo.
+      </p>
+
+      <div class="note warn">
+        <span class="note-label">Sin correo configurado</span>
+        <p>
+          Si no hay servidor SMTP cargado, los peldaños de correo no existen y la escalera se
+          queda corta. Con la app de escritorio instalada alcanza para el día a día, pero conviene
+          configurarlo — es también lo que hace funcionar el alta por email.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="escritorio">
+      <h2>La app de escritorio</h2>
+      <p class="sub">Hace dos cosas: el chat del agente y los avisos. Nada más, a propósito.</p>
+
+      <p>
+        <strong>No es una versión de escritorio de la plataforma.</strong> No trae el tablero, ni
+        el detalle de tareas, ni la configuración — eso vive en la web, y mantener dos interfaces
+        para lo mismo garantiza que una quede desactualizada. Cualquier enlace que no sea el chat
+        se abre en tu navegador.
+      </p>
+
+      <h3>Entrar una sola vez</h3>
+      <p>
+        La primera vez pide la dirección del servidor, tu email y tu contraseña. Al entrar, la app
+        registra este equipo y guarda un permiso que no vence: <strong>la contraseña se pide una
+        sola vez</strong>. Ese permiso se revoca desde <strong>Personas</strong> en la web, sin
+        tocar tu contraseña — es la diferencia con dejar una sesión eterna.
+      </p>
+
+      <h3>Vive en la bandeja</h3>
+      <p>
+        Arranca con Windows y se queda junto al reloj. Cerrar la ventana no la cierra: la esconde,
+        porque cerrarla te dejaría sin avisos sin que te dieras cuenta. Desde el menú del icono:
+      </p>
+      <ul>
+        <li><strong>Check-in ahora</strong> — abre la conversación del día</li>
+        <li><strong>Mensajes</strong> y <strong>Ir al sistema web</strong> — abren el navegador</li>
+        <li><strong>Pausar notificaciones</strong> — para cuando necesitás concentrarte</li>
+        <li><strong>Cambiar de usuario</strong> — cierra la sesión de este equipo</li>
+        <li><strong>Salir</strong> — cierra la app de verdad</li>
+      </ul>
+
+      <div class="note">
+        <span class="note-label">La dirección del servidor</span>
+        <p>
+          Tiene que ser la misma que usás en el navegador. Si la app no logra cargar el chat, te
+          dice qué dirección intentó y te deja corregirla ahí mismo, sin volver a pedirte la
+          contraseña.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="actividad">
+      <h2>Actividad y mensajes</h2>
+      <p class="sub">Todo cambio tiene autor, y el del agente está ligado a la charla que lo originó.</p>
+
+      <h3>Actividad</h3>
+      <p>
+        Cada cambio queda registrado con quién lo hizo. Se puede filtrar por proyecto, por
+        persona, y por <strong>si lo hizo una persona o el agente</strong>. Lo que tocó el agente
+        queda ligado al check-in del que salió, así que siempre se puede llegar a la conversación
+        que lo explica.
+      </p>
+      <p>
+        Es lo que hace auditable a un sistema donde una IA escribe: no hay cambio sin origen.
+      </p>
+
+      <h3>Mensajes</h3>
+      <p>
+        Conversaciones entre personas del equipo, dentro de la plataforma. Sirven para lo que no
+        es una tarea: una pregunta, un aviso, coordinar algo. Si la otra persona no está
+        conectada, le llega por su canal habitual.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="formulario">
+      <h2>El formulario público</h2>
+      <p class="sub">Para que alguien de afuera pida trabajo sin tener cuenta.</p>
+
+      <p>
+        Quien lidera un proyecto puede abrir un formulario público y compartir su enlace. Quien lo
+        completa no necesita usuario: deja su nombre, su correo y el pedido, y entra al tablero
+        como trabajo sin asignar.
+      </p>
+      <p>
+        El formulario respeta los campos del proyecto, así que un pedido llega con los datos que
+        hacen falta para atenderlo. Es la única lectura anónima de todo el sistema.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="config">
+      <h2>Configuración</h2>
+      <p class="sub">Para administradores. Lo que se carga acá vale para toda la organización.</p>
+
+      <div class="note">
+        <span class="note-label">Dos capas</span>
+        <p>
+          Quien despliega la plataforma pone valores por defecto que sirven desde el primer día.
+          Cada organización puede reemplazarlos por los propios — apuntar el agente a su propio
+          modelo, usar su propio servidor de correo — y deja de consumir los de la plataforma.
+        </p>
+      </div>
+
+      <h3>Cuándo escribe el agente</h3>
+      <dl class="settings">
+        <dt>Cuándo escribe el agente</dt>
+        <dd><code>diario</code> o <code>cuando-hace-falta</code>. Ver <a href="#checkin">el check-in</a>.</dd>
+        <dt>Días sin actualizar que disparan el check-in</dt>
+        <dd>Cuánto puede quedarse quieta una tarea antes de que pregunte. Solo aplica en «cuando hace falta».</dd>
+        <dt>Hora del check-in y días laborables</dt>
+        <dd>Los valores por defecto de la organización. Cada persona puede tener los suyos.</dd>
+      </dl>
+
+      <h3>La escalera de avisos</h3>
+      <dl class="settings">
+        <dt>Segundo aviso, primer correo, segundo correo, marcar perdido</dt>
+        <dd>Los minutos de cada peldaño. Ver <a href="#avisos">la escalera</a>.</dd>
+        <dt>Tolerancia del latido</dt>
+        <dd>Cuánto silencio de la app de escritorio se acepta antes de considerar el canal caído.</dd>
+      </dl>
+
+      <h3>El modelo de IA</h3>
+      <dl class="settings">
+        <dt>Proveedor</dt>
+        <dd>La API del proveedor, un modelo compatible que corra en tu servidor, o el modo de prueba sin red.</dd>
+        <dt>Modelo, clave de API, URL base</dt>
+        <dd>La clave se guarda cifrada y nunca se devuelve. La URL base solo hace falta para un modelo propio.</dd>
+        <dt>Tope de turnos y de tokens</dt>
+        <dd>Cortan una conversación que se estira o una respuesta demasiado larga.</dd>
+      </dl>
+      <p>
+        El botón <strong>«Detectar modelos locales»</strong> le pregunta al servidor qué tiene
+        instalado y te ofrece los nombres, en vez de que los escribas a mano — un error de tipeo
+        en el nombre del modelo recién se descubre en el primer check-in del día.
+      </p>
+
+      <h3>Correo</h3>
+      <dl class="settings">
+        <dt>Servidor, puerto, STARTTLS, usuario y contraseña</dt>
+        <dd>Los datos del SMTP. La contraseña se guarda cifrada.</dd>
+        <dt>Remitente y nombre del remitente</dt>
+        <dd>Cómo se ve en la bandeja de quien recibe.</dd>
+        <dt>Carpeta del modo disco</dt>
+        <dd>Para probar sin mandar correo de verdad: los mensajes se escriben como archivos.</dd>
+      </dl>
+
+      <h3>Entrada con proveedor externo</h3>
+      <dl class="settings">
+        <dt>Autoridad, ID y secreto de cliente</dt>
+        <dd>Los datos de tu proveedor OpenID — Google u otro. Con esto aparece su botón en la pantalla de entrada.</dd>
+      </dl>
+
+      <h3>Otros</h3>
+      <dl class="settings">
+        <dt>URL pública del sistema</dt>
+        <dd>De acá salen los enlaces de los correos. Si no coincide con la dirección real, los enlaces no funcionan.</dd>
+        <dt>Tamaño máximo de archivo</dt>
+        <dd>El techo de los entregables que se suben.</dd>
+      </dl>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="personas">
+      <h2>Personas</h2>
+      <p class="sub">Dar de alta, configurar el ritmo de cada uno, y sacar del medio a quien se fue.</p>
+
+      <p>
+        En <strong>Personas</strong> el administrador crea usuarios con su rol, y define para cada
+        uno su zona horaria, la hora de su check-in y sus días laborables. Alguien que trabaja de
+        martes a sábado no recibe un check-in el lunes.
+      </p>
+      <p>
+        También se puede <strong>apagar los check-in</strong> de una persona sin desactivarla: útil
+        para quien participa del tablero pero no responde conversaciones, como un cliente revisor.
+      </p>
+
+      <h3>Cuando alguien se va</h3>
+      <p>
+        <strong>Desactivalo, no lo borres.</strong> Desactivar corta el acceso y detiene los
+        check-in, pero deja intacto el historial: quién movió qué, y cuándo. Si además tenía la app
+        de escritorio, revocá su equipo desde la misma pantalla.
+      </p>
+
+      <div class="note warn">
+        <span class="note-label">Antes de desactivar</span>
+        <p>
+          Mirá si figura como responsable de alguna etapa. Si es así, el trabajo que caiga ahí va a
+          quedar sin asignar — el sistema avisa, pero es mejor reasignar la etapa antes que
+          descubrirlo después.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="operador">
+      <h2>La consola de operador</h2>
+      <p class="sub">Solo en instalaciones que sirven a varias empresas.</p>
+
+      <p>
+        Una misma instalación puede alojar muchas organizaciones, separadas de raíz: cada una ve
+        sus proyectos, su gente y sus conversaciones, y <strong>nada de las demás</strong>. Cada
+        una se identifica en el encabezado con su nombre y su logo, así que quien entra sabe
+        siempre en qué empresa está.
+      </p>
+      <p>
+        Quien opera la instalación tiene su propia consola, en <strong>Organizaciones</strong>:
+      </p>
+      <ul>
+        <li>Dar de alta una organización con su primer administrador</li>
+        <li>Ver cuánta gente, cuántos proyectos y cuánto trabajo abierto tiene cada una</li>
+        <li>Ver su consumo del modelo de los últimos 30 días, y si usa uno propio</li>
+        <li><strong>Suspender</strong> una organización — su gente deja de poder entrar, nada se
+          borra — y reactivarla cuando corresponda</li>
+        <li><strong>Borrarla del todo</strong>, cuando ya no tiene que quedar nada</li>
+      </ul>
+
+      <div class="note danger">
+        <span class="note-label">Borrar no tiene vuelta atrás</span>
+        <p>
+          Se van sus personas, sus proyectos, sus tareas, sus conversaciones y sus archivos. No hay
+          papelera ni forma de recuperarlo desde la plataforma — solo desde un respaldo de la base,
+          si existe.
+        </p>
+        <p>
+          Por eso hay tres barreras: la organización <strong>tiene que estar suspendida</strong>
+          antes (así el borrado nunca es un impulso), hay que <strong>escribir su nombre
+          exacto</strong>, y la organización de la plataforma no se puede borrar nunca — dejaría la
+          instalación sin nadie que pueda administrarla.
+        </p>
+      </div>
+
+      <div class="note">
+        <span class="note-label">Lo que el operador no puede</span>
+        <p>
+          <strong>Ver adentro.</strong> Ni un proyecto, ni una tarea, ni una conversación. Su
+          cuenta vive en su propia organización y el mismo filtro que separa a las empresas entre
+          sí lo separa a él de todas. Es un rol distinto del administrador justamente para que la
+          frase «este administrador no puede ver la empresa de al lado» se pueda sostener.
+        </p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="idiomas">
+      <h2>Idiomas</h2>
+      <p class="sub">Español, inglés y portugués. El idioma es de cada persona, no de la empresa.</p>
+
+      <p>
+        Cada uno elige el suyo con el selector que está en toda pantalla, incluida la de entrada.
+        La elección se guarda en tu usuario, así que también viaja a los correos que te manda el
+        sistema — que los arma el servidor, sin navegador del cual deducir tu idioma.
+      </p>
+      <p>
+        La primera vez se toma del navegador. Si no se puede determinar, <strong>inglés</strong>.
+        En un equipo con gente en distintos países, cada uno ve la plataforma en su idioma sin que
+        nadie configure nada.
+      </p>
+    </section>
+
+    <!-- ─────────────────────────────────────────────────────────────────── -->
+    <section id="problemas">
+      <h2>Cuando algo no anda</h2>
+      <p class="sub">Los cinco casos que aparecen de verdad.</p>
+
+      <h3>No me llega ningún check-in</h3>
+      <ul>
+        <li>¿Tenés trabajo abierto asignado? Sin trabajo no hay de qué hablar.</li>
+        <li>¿Hoy es un día laborable según tu configuración en Personas?</li>
+        <li>Si la organización está en modo «cuando hace falta», puede que simplemente no haya
+          nada que lo justifique. Es el comportamiento correcto.</li>
+        <li>¿La app de escritorio está corriendo? Fijate en la bandeja.</li>
+      </ul>
+
+      <h3>El agente contesta con un guion fijo y raro</h3>
+      <p>
+        Está en modo de prueba, sin modelo. Pasa cuando falta la clave de API o el proveedor no
+        está configurado. En Configuración, el estado del modelo dice qué está usando de verdad —
+        no lo que se pretendía usar.
+      </p>
+
+      <h3>El correo no sale</h3>
+      <p>
+        Sin SMTP configurado no hay correo, y eso también rompe el alta por email. Revisá los
+        datos del servidor y que la <strong>URL pública</strong> coincida con la dirección real:
+        de ahí salen los enlaces de los mensajes.
+      </p>
+
+      <h3>La app de escritorio no muestra el chat</h3>
+      <p>
+        Casi siempre es la dirección del servidor: tiene que ser la misma que usás en el
+        navegador. La app te dice qué dirección intentó y te deja corregirla sin pedirte la
+        contraseña de nuevo.
+      </p>
+
+      <h3>El agente movió algo que no correspondía</h3>
+      <p>
+        Buscalo en <strong>Actividad</strong>, filtrando por «Agente de IA». Vas a ver el cambio y
+        el check-in del que salió, así que se puede leer la conversación completa y entender qué
+        interpretó. Corregilo a mano y, si el patrón se repite, contáselo a quien administra: la
+        pista del campo o el modo de check-in suelen ser el ajuste que faltaba.
+      </p>
+    </section>
+
+    <hr>
+
+  </main>
+</div>
+
+<footer>
+  <p>
+    TaskAdmin — manual de uso y administración. Escrito para la versión con agente de check-ins,
+    relevo por etapa y tablero en tiempo real.
+  </p>
+</footer>

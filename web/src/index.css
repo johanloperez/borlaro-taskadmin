@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/* Tokens del sistema. Tailwind v4 los expone como utilidades automáticamente:
+   `bg-surface`, `text-ink-muted`, `border-line`, etc. */
+@theme {
+  /* Neutrales con un leve sesgo cálido: una herramienta que se mira ocho horas por día
+     cansa menos que el gris azulado puro. */
+  --color-canvas: #faf9f7;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-line: #e7e4df;
+  --color-line-strong: #d4d0c9;
+  --color-ink: #1c1a17;
+  --color-ink-muted: #6b665e;
+  --color-ink-subtle: #98928a;
+
+  /* Un solo acento saturado, teal profundo: legible sobre claro y oscuro, y no cae en el
+     degradado violeta que delata a una interfaz generada. */
+  --color-accent: #0f766e;
+  --color-accent-hover: #115e59;
+  --color-accent-soft: #ccfbf1;
+  --color-accent-ink: #ffffff;
+
+  /* Semánticos por familia de etapa. La UI colorea por StageCategory, no por nombre de
+     etapa, porque el nombre cambia según la disciplina. */
+  --color-stage-backlog: #8b8680;
+  --color-stage-todo: #3b82f6;
+  --color-stage-progress: #d97706;
+  --color-stage-blocked: #dc2626;
+  --color-stage-review: #7c3aed;
+  --color-stage-done: #059669;
+
+  --radius-card: 0.625rem;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* El toggle de tema escribe data-theme en <html>; el media query cubre el arranque
+   antes de que el store hidrate. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-canvas: #14130f;
+    --color-surface: #1c1a17;
+    --color-surface-raised: #232019;
+    --color-line: #302c26;
+    --color-line-strong: #423d35;
+    --color-ink: #f5f2ed;
+    --color-ink-muted: #a49e94;
+    --color-ink-subtle: #6f6960;
+    --color-accent: #2dd4bf;
+    --color-accent-hover: #5eead4;
+    --color-accent-soft: #134e4a;
+    --color-accent-ink: #0b1211;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-canvas: #14130f;
+  --color-surface: #1c1a17;
+  --color-surface-raised: #232019;
+  --color-line: #302c26;
+  --color-line-strong: #423d35;
+  --color-ink: #f5f2ed;
+  --color-ink-muted: #a49e94;
+  --color-ink-subtle: #6f6960;
+  --color-accent: #2dd4bf;
+  --color-accent-hover: #5eead4;
+  --color-accent-soft: #134e4a;
+  --color-accent-ink: #0b1211;
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Foco visible siempre: un tablero se opera con teclado tanto como con mouse. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-ink);
+  }
+}

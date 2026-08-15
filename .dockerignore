@@ -1,0 +1,24 @@
+# Sin esto, los artefactos de compilación del host entran a la imagen y rompen el build de dos
+# maneras distintas: los `obj/` traen un project.assets.json con rutas de Windows que invalida el
+# restore de Linux, y `node_modules` con binarios nativos del host reemplaza a los que instala
+# `npm ci` adentro del contenedor.
+**/bin/
+**/obj/
+**/node_modules/
+web/dist/
+
+# Nada de esto sirve adentro de la imagen, y algo de esto no debería salir de la máquina.
+.git/
+.env
+.admin-credentials.txt
+*.log
+.claude/
+.vs/
+.idea/
+
+# Datos generados en desarrollo: los entregables y los emails de prueba viven en volúmenes.
+src/TaskAdmin.Api/uploads/
+src/TaskAdmin.Api/outbox/
+
+# La app de escritorio no forma parte de ninguna imagen: se distribuye como instalador.
+src/TaskAdmin.Desktop/
