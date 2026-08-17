@@ -88,7 +88,10 @@ function useModelStatus(enabled: boolean) {
  *  no está. */
 function useLocalModels() {
   return useMutation({
-    mutationFn: () => api<LocalModels>('/api/settings/model/available'),
+    // La URL y la clave van en el cuerpo: una clave de API en la query string termina en los
+    // registros del servidor y en el historial del navegador.
+    mutationFn: (body: { baseUrl?: string; apiKey?: string }) =>
+      api<LocalModels>('/api/settings/model/available', { method: 'POST', body }),
   })
 }
 
@@ -204,7 +207,15 @@ export function SettingsPage() {
               <div className="mt-2 rounded-card border border-line bg-surface p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => local.mutate()}
+                    // Se consulta lo que está escrito en pantalla, no lo guardado: probar una
+                    // URL y una clave antes de guardarlas es justo cuando uno quiere saber si
+                    // funcionan. Vacío cae en lo que la organización ya tenga.
+                    onClick={() =>
+                      local.mutate({
+                        baseUrl: draft['AgentModel:BaseUrl'] ?? undefined,
+                        apiKey: draft['AgentModel:ApiKey'] ?? undefined,
+                      })
+                    }
                     disabled={local.isPending}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5
                                text-xs text-ink-muted hover:bg-canvas hover:text-ink disabled:opacity-50"
@@ -224,12 +235,37 @@ export function SettingsPage() {
                 )}
 
                 {local.data && !local.data.error && (
-                  <p className="mt-2 text-xs text-ink-muted">
-                    {t('settings.detected', {
-                      count: local.data.models.length,
-                      url: local.data.baseUrl,
-                    })}
-                  </p>
+                  <>
+                    <p className="mt-2 text-xs text-ink-muted">
+                      {t('settings.detected', {
+                        count: local.data.models.length,
+                        url: local.data.baseUrl,
+                      })}
+                    </p>
+
+                    {/* Se ofrecen como botones y no como un desplegable aparte: el campo Modelo
+                        sigue siendo de texto libre —hay proveedores cuyo /models no lista todo lo
+                        que aceptan— y esto es un atajo para no escribirlo a mano, que es donde se
+                        cuelan los typos que fallan recién en el primer check-in. */}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {local.data.models.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setDraft((d) => ({ ...d, 'AgentModel:Model': m }))}
+                          className={cn(
+                            'rounded-full border px-2 py-0.5 text-[11px] transition-colors',
+                            (draft['AgentModel:Model'] ??
+                              settings.data?.find((x) => x.key === 'AgentModel:Model')?.value) === m
+                              ? 'border-accent bg-accent-soft/50 text-ink'
+                              : 'border-line text-ink-muted hover:border-line-strong',
+                          )}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             )}

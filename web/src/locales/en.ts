@@ -630,7 +630,7 @@ export const en = {
   'settings.platformTitle': 'Installation settings',
   'settings.subtitle': 'Everything adjustable in your organization lives here. What you don’t change is inherited from the platform. Changes apply live, without restarting the server.',
   'settings.platformSubtitle': 'What belongs to every organization: sign-in, sessions, the public URL. Each company configures its own — its model, its SMTP, its schedules — from its own screen.',
-  'settings.detectModels': 'Detect local models',
+  'settings.detectModels': 'Query available models',
   'settings.runningNow': 'Right now it answers:',
   'settings.testModel': 'test model',
   'settings.saveFailed': 'Couldn\'t save.',
@@ -642,7 +642,7 @@ export const en = {
   'settings.inherited': 'inherited',
 
   // ── Settings screen (cont.) ──
-  'settings.detectHelp': 'Asks the local server (Ollama, LM Studio) which models it has installed.',
+  'settings.detectHelp': 'Asks whatever server the base URL points at — Ollama or LM Studio on your machine, Groq or any OpenAI-compatible provider in the cloud. Uses what you typed above, so you can test before saving.',
   'settings.detected': '{count} model(s) at {url}. Pick it under “Model”, below.',
   'settings.providerAnswers': 'The provider answers',
   'settings.providerAs': 'as',

@@ -630,7 +630,7 @@ export const es: Dictionary = {
   'settings.platformTitle': 'Configuración de la instalación',
   'settings.subtitle': 'Lo ajustable de tu organización vive acá. Lo que no cambies se hereda de la plataforma. Los cambios se aplican en caliente, sin reiniciar el servidor.',
   'settings.platformSubtitle': 'Lo que es de todas las organizaciones: el login, las sesiones, la URL pública. Cada empresa configura lo suyo —su modelo, su SMTP, sus horarios— desde su propia pantalla.',
-  'settings.detectModels': 'Detectar modelos locales',
+  'settings.detectModels': 'Consultar modelos disponibles',
   'settings.runningNow': 'Ahora mismo responde:',
   'settings.testModel': 'modelo de prueba',
   'settings.saveFailed': 'No se pudo guardar.',
@@ -642,7 +642,7 @@ export const es: Dictionary = {
   'settings.inherited': 'heredado',
 
   // ── Settings screen (cont.) ──
-  'settings.detectHelp': 'Pregunta al servidor local (Ollama, LM Studio) qué modelos tiene instalados.',
+  'settings.detectHelp': 'Le pregunta al servidor de la URL base —Ollama o LM Studio en tu máquina, Groq o cualquier proveedor compatible con OpenAI en la nube—. Usa lo que escribiste arriba, así que podés probar antes de guardar.',
   'settings.detected': '{count} modelo(s) en {url}. Elegilo en «Modelo», acá abajo.',
   'settings.providerAnswers': 'El proveedor responde',
   'settings.providerAs': 'como',

@@ -6,6 +6,9 @@ using Borlaro.Tms.Infrastructure.Settings;
 
 namespace Borlaro.Tms.Api.Endpoints;
 
+/// <summary>Qué servidor consultar. Los dos vacíos = lo que la organización tenga guardado.</summary>
+public record ProbeModelsBody(string? BaseUrl, string? ApiKey);
+
 public record SaveSettingsBody(Dictionary<string, string?> Values);
 
 /// <summary>La configuración de la instancia, editable por el admin desde la interfaz.
@@ -34,15 +37,32 @@ public static class SettingsEndpoints
             Results.Ok(factory.Status(await organization.AgentModelAsync(ct))))
         .WithName("AgentModelStatus");
 
-        /// Los modelos que tiene instalados el servidor local (Ollama, LM Studio). Se pregunta en
-        /// vez de hacer escribir el nombre a mano.
-        settings.MapGet("/model/available", async (
+        /// <summary>Los modelos que ofrece un servidor compatible con OpenAI —Ollama y LM Studio
+        /// en la máquina, Groq o cualquier otro en la nube—. Se pregunta en vez de hacer escribir
+        /// el nombre a mano: un typo no falla al guardar, falla en el primer check-in del día.
+        ///
+        /// **Es POST y no GET, y la clave va en el cuerpo.** Una clave de API en la query string
+        /// termina en los registros del servidor, en el historial del navegador y en el `Referer`
+        /// de lo que sea que se cargue después. Que sea un secreto de la propia organización no lo
+        /// hace menos secreto.
+        ///
+        /// Los dos parámetros son opcionales: vacíos, se usa lo que la organización tenga
+        /// guardado. Sirven para probar una URL y una clave **antes** de guardarlas, que es
+        /// justamente cuando uno quiere saber si funcionan.</summary>
+        settings.MapPost("/model/available", async (
+            ProbeModelsBody? body,
             AgentModelFactory factory,
             OrganizationSettings organization,
             CancellationToken ct) =>
-            Results.Ok(await factory.AvailableModelsAsync(
-                (await organization.AgentModelAsync(ct)).BaseUrl, ct)))
-        .WithName("AvailableLocalModels");
+        {
+            var guardado = await organization.AgentModelAsync(ct);
+
+            var baseUrl = string.IsNullOrWhiteSpace(body?.BaseUrl) ? guardado.BaseUrl : body!.BaseUrl;
+            var apiKey = string.IsNullOrWhiteSpace(body?.ApiKey) ? guardado.ApiKey : body!.ApiKey;
+
+            return Results.Ok(await factory.AvailableModelsAsync(baseUrl, apiKey, ct));
+        })
+        .WithName("AvailableModels");
 
         /// Si el proveedor de identidad responde, y con qué URL de redirección hay que darlo de
         /// alta del otro lado. Pegar mal esa URL es el error más común de esta integración, y el

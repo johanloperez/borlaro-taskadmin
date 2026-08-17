@@ -95,7 +95,24 @@ public class AgentModelFactory(
     public Task<LocalModelsResult> AvailableModelsAsync(CancellationToken ct = default) =>
         AvailableModelsAsync(options.CurrentValue.BaseUrl, ct);
 
-    public async Task<LocalModelsResult> AvailableModelsAsync(string? configuredBaseUrl, CancellationToken ct = default)
+    public async Task<LocalModelsResult> AvailableModelsAsync(
+        string? configuredBaseUrl,
+        CancellationToken ct = default) =>
+        await AvailableModelsAsync(configuredBaseUrl, apiKey: null, ct);
+
+    /// <summary>Los modelos que ofrece un servidor compatible con OpenAI, sea local o en la nube.
+    ///
+    /// `GET /models` es parte del estándar, así que la misma llamada sirve para Ollama, LM Studio,
+    /// Groq o cualquier otro: lo único que cambia es que los de la nube piden autorización, y sin
+    /// la clave responden 401 en vez de la lista.
+    ///
+    /// Se pregunta en vez de hacer escribir el nombre a mano porque un typo en el modelo no falla
+    /// al guardar: falla en el primer check-in del día, con un 404 del proveedor que no explica
+    /// nada.</summary>
+    public async Task<LocalModelsResult> AvailableModelsAsync(
+        string? configuredBaseUrl,
+        string? apiKey,
+        CancellationToken ct = default)
     {
         var baseUrl = configuredBaseUrl;
         if (string.IsNullOrWhiteSpace(baseUrl)) baseUrl = DefaultLocalBaseUrl;
@@ -107,12 +124,30 @@ public class AgentModelFactory(
 
         try
         {
-            using var response = await http.GetAsync(url, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            // Los servidores locales no piden clave y los de la nube no responden sin ella. Se
+            // manda cuando la hay y listo: el mismo botón sirve para los dos casos.
+            if (!string.IsNullOrWhiteSpace(apiKey))
+            {
+                request.Headers.Authorization = new("Bearer", apiKey);
+            }
+
+            using var response = await http.SendAsync(request, ct);
 
             if (!response.IsSuccessStatusCode)
             {
+                // 401 y 403 tienen una causa concreta y una salida concreta, y decirlo evita la
+                // ronda de «respondió 401» → «¿y eso qué significa?».
+                var detalle = (int)response.StatusCode switch
+                {
+                    401 or 403 => " Falta la clave de API o no es válida para este proveedor.",
+                    404 => " Esa URL no expone /models. Revisá que termine en /v1.",
+                    _ => string.Empty
+                };
+
                 return new LocalModelsResult([], baseUrl,
-                    $"El servidor en {baseUrl} respondió {(int)response.StatusCode}.");
+                    $"El servidor en {baseUrl} respondió {(int)response.StatusCode}.{detalle}");
             }
 
             var json = JsonNode.Parse(await response.Content.ReadAsStringAsync(ct));
