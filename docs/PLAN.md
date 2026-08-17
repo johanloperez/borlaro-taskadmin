@@ -269,15 +269,23 @@ Que el mensaje llegue y que la persona conteste son dos problemas distintos, y l
 
 **Entrega — escalera automática.** El check-in es una máquina de estados con acuse de recibo, no un "fire and forget":
 
-| Momento | Acción |
-|---|---|
-| T+0 | Toast de escritorio si hay heartbeat vivo |
-| T+15 min sin abrir | Segundo toast, más insistente, y badge persistente en la bandeja |
-| T+45 min sin abrir, **o sin heartbeat desde el inicio** | Email con enlace directo al chat (token de un solo uso, sin login) |
-| T+2 h sin abrir | Segundo email + entrada en el feed del manager como "check-in sin entregar" |
-| T+4 h (o fin de jornada) | Check-in marcado `missed` y contabilizado en la métrica de cobertura |
+| Momento | Peldaño | Por dónde |
+|---|---|---|
+| T+0 | `FirstDirectPing` | El canal personal de esa persona |
+| T+15 min sin abrir | `SecondDirectPing` | El mismo, más insistente |
+| T+45 min sin abrir, **o sin ningún canal personal disponible desde el inicio** | `FirstEmail` | Correo, con enlace directo al chat |
+| T+2 h sin abrir | `SecondEmailAndManagerFeed` | Correo + entrada en el feed del líder |
+| T+4 h | `MarkedMissed` | Se marca `missed` y cuenta en la métrica de cobertura |
 
-Cada paso se cancela apenas la app confirma **entrega** (`delivered_at`) y luego **apertura** (`opened_at`) — dos acuses distintos, porque "el toast salió" no es lo mismo que "lo vio".
+**Los peldaños nombran un rol, no un canal**, y eso es deliberado. Se llamaban `FirstDesktopToast` y `SecondDesktopToast`, y ese nombre ataba la escalera a la app de bandeja —que es de Windows—. Con equipos donde el proyecto de video trabaja en Mac y el de desarrollo está mezclado, la escalera empezaba por un canal que para media empresa no existía.
+
+Ahora los dos primeros peldaños se resuelven contra **los canales personales de la persona**: todo lo que no sea correo ni la campana de la aplicación. Se prueban en orden —el preferido primero, si lo fijó— y se usa el primero que conteste que puede entregar ahora. `Users.PreferredChannel`, nulo por defecto, es para quien tiene dos y quiere que le lleguen por uno.
+
+**El correo no se elige como preferido**, y el endpoint lo rechaza: no es un canal personal sino el último recurso de todos, el único que no exige haber instalado ni vinculado nada. Dejarlo elegir sería saltearse los dos primeros peldaños sin querer.
+
+**Si ningún canal personal puede entregar** —nadie con la app abierta, nadie con Slack vinculado—, se salta directo al correo en vez de gastar los 15 y 45 minutos esperando un acuse imposible. Y cada canal que no pudo entregar deja su propio registro: «no le llegó» y «no había por dónde» son dos historias distintas cuando alguien pregunta al día siguiente.
+
+Cada paso se cancela apenas hay **entrega** (`delivered_at`) y luego **apertura** (`opened_at`) — dos acuses distintos, porque "el aviso salió" no es lo mismo que "lo vio". **Solo el escritorio tiene acuse de apertura de verdad**; el resto se cuenta como entregado al mandarlo, y lo que sigue faltando es que la persona lo abra.
 
 **Respuesta — el problema difícil.** No se resuelve con presión técnica: si la conversación es larga o burocrática, la gente la abandona a la mitad. Los mecanismos que sí funcionan:
 
@@ -749,6 +757,8 @@ Suspender cubre el caso normal —cortar el acceso por falta de pago o por abuso
 | `TASKADMIN_DOMAIN` | Está en el `.env` de cada instalación; renombrarla las rompe hasta que alguien edite ese archivo |
 | `C:\Respaldos\TaskAdmin` y la tarea programada del respaldo | Arrancaría una serie de respaldos nueva dejando la vieja sin rotar, y una segunda tarea al lado de la que ya corre |
 
+**Y hay un tercer lugar que no es ni código ni estado: el SQL escrito a mano.** Los scripts de `deploy/` insertan filas con SQL directo, y los enums se guardan como texto. Cuando los peldaños de la escalera pasaron de `FirstDesktopToast` a `FirstDirectPing` (§20), `disparar-checkin.ps1` siguió insertando el nombre viejo: compilaba todo, el typecheck pasaba, y la API respondía **500 al abrir el check-in** que el propio script acababa de crear. No lo protege ningún compilador, así que **todo renombre de enum tiene que pasar también por `deploy/*.ps1`**.
+
 La regla de fondo: **renombrar es gratis en el código y caro en el estado.** Lo que solo existe en el repositorio se renombra; lo que además existe en un disco ajeno se migra a mano o no se toca. Estos nombres se pueden migrar más adelante, de a uno y con la instalación parada; ninguno es visible para quien usa la aplicación.
 
 ✅ **Construido y verificado**: la solución compila con 0 errores tras mover los cinco proyectos, y el frontend construye. El `docker-compose.yml` y el `Dockerfile` ya apuntan a las rutas nuevas.
@@ -883,6 +893,35 @@ Lo que quedó escrito:
 - Que la dificultad obligatoria no trabe el alta rápida, y que el reparto por lista elija efectivamente al de menos carga.
 - **Repetir la prueba de borrado de organización de §15**, ahora que hay una tabla más en la lista.
 - **Confirmar que la dificultad obligatoria no molesta en el uso diario.** Es un clic más en cada alta, y el formulario rápido existe para anotar algo en dos segundos. Si en la práctica frena, la salida no es ponerle un default —eso rompe el dato— sino recordar el último nivel elegido en ese proyecto.
+
+---
+
+## 20. Un canal por persona, y por qué no tres apps de escritorio
+
+**El problema.** La app de bandeja es WPF, o sea Windows. Pero los equipos no son homogéneos: el proyecto de video trabaja en Mac, el de desarrollo mezcla Windows y Linux y suma Mac cuando hay algo para iOS. Para media empresa, el primer peldaño de la escalera no existía — y la escalera lo descubría recién a los 45 minutos, cayendo a correo.
+
+**La salida obvia era construir la app para Mac y Linux. Se descartó, y no por costo.**
+
+Lo que hace la app de escritorio es: recibir un push, mostrar un aviso, abrir el chat y acusar recibo. **Slack hace exactamente eso, en los tres sistemas y además en el teléfono**, sin empaquetar, firmar, notarizar en Apple, armar `.deb`/`.rpm`/AppImage ni mantener tres mecanismos de autoactualización. Construir tres clientes nativos sería resolver por triplicado un problema que un canal ya resuelto resuelve mejor.
+
+Y **la señal que devuelve es más fuerte, no más débil**. El argumento para poner el escritorio primero era su acuse confiable de apertura. Pero el acuse dice «abrió el aviso»; una respuesta en Slack dice «contestó, y esto dijo» — que es el dato que alimenta al agente y el que realmente importa.
+
+Si alguna vez hace falta un cliente nativo —una empresa que no use Slack ni Teams—, se hace **uno solo multiplataforma con Avalonia**, que es .NET y reutiliza `AgentConnection` y `AgentApi` sobre SignalR casi tal cual. Electron o Tauri obligarían a reescribir esa capa en otro lenguaje para no ganar nada. Tres, nunca.
+
+**El canal es de la persona, no del proyecto.** Aunque los proyectos tiendan a agrupar sistemas operativos, la misma persona está en varios proyectos y sigue teniendo una sola computadora. Por eso `PreferredChannel` vive en `Users` y no en `Projects`.
+
+**Qué falta para Slack, en orden:**
+
+1. `SlackChannel : INotificationChannel` — entrega por mensaje directo del bot. Es la parte fácil: la escalera ya no necesita enterarse.
+2. **La vuelta**, que es la difícil: endpoint público para Events API, verificación de la firma de Slack, y mapear «este usuario de Slack es esta persona». Nada de eso se comparte entre proveedores.
+3. Vincular la cuenta: una persona tiene que poder decir «este soy yo en Slack», y hasta que no lo haga su canal Slack no puede entregar.
+4. Teams después, reusando 1 y 3 con su propio proveedor.
+
+**Dos requisitos que no son de código:** las credenciales de la app de Slack —bot token y signing secret, que van cifradas en Configuración— y una **URL pública y estable** para los webhooks, que hoy la instalación no tiene porque vive detrás de Caddy en una red doméstica.
+
+✅ **Construido y verificado**: la escalera resuelve el canal por persona; `Users.PreferredChannel` con su selector en Personas, y el correo rechazado como preferido. Migración aplicada sobre la base real, incluido el renombre de los peldaños ya guardados —dos filas de `FirstDesktopToast` pasaron a `FirstDirectPing`— sin romper el historial de entregas. La API arranca sin errores.
+
+⏳ **Pendiente:** todo Slack, del punto 1 al 4. Y probar la escalera nueva con dos personas de canales distintos, que es lo único que demuestra que el reparto por canal funciona.
 
 ---
 

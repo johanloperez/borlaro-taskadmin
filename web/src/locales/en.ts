@@ -714,4 +714,9 @@ export const en = {
   'nav.expandMenu': 'Expand menu',
   'nav.openMenu': 'Open menu',
   'nav.closeMenu': 'Close menu',
+  'people.preferredChannel': 'Where the agent writes',
+  'people.channelAuto': 'Automatic',
+  'people.channelDesktop': 'Tray app (Windows)',
+  'people.channelSlack': 'Slack',
+  'people.channelHelp': 'Email is not an option here: it is everyone’s last resort, after the first two rungs.',
 }

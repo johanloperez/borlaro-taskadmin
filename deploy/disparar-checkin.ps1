@@ -55,11 +55,17 @@ $id = [guid]::NewGuid()
 
 # NextEscalationAt = now() es lo que lo hace inmediato: el barrido levanta lo que ya vencio.
 # Status 'Pending' y OpenedAt nulo son las otras dos condiciones de la busqueda.
+#
+# OJO con 'FirstDirectPing': los enums se guardan como TEXTO, asi que este literal tiene que
+# coincidir con EscalationStep del codigo. Cuando el peldano se llamaba 'FirstDesktopToast' y se
+# renombro, este script siguio insertando el nombre viejo y la API respondia 500 al abrir el
+# check-in — el enum no sabia leer la fila que el propio script acababa de crear. Si algun dia se
+# renombran los peldanos, hay que tocar este archivo en la misma tanda.
 $sql = @"
 INSERT INTO "CheckIns" ("Id","UserId","OrganizationId","ScheduledAt","LocalDate","Status",
                         "EscalationStep","NextEscalationAt","ClosedAsNoChanges","TurnCount",
                         "InputTokens","OutputTokens","CacheReadTokens","CreatedAt")
-VALUES ('$id','$uid','$oid', now(), CURRENT_DATE, 'Pending','FirstDesktopToast', now(),
+VALUES ('$id','$uid','$oid', now(), CURRENT_DATE, 'Pending','FirstDirectPing', now(),
         false, 0,0,0,0, now())
 ON CONFLICT ("UserId","LocalDate") DO NOTHING
 RETURNING "Id";

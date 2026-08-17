@@ -40,6 +40,19 @@ public class User : IOrganizationScoped
 
     public bool CheckInsEnabled { get; set; } = true;
 
+    /// <summary>Por dónde prefiere que le escriba el agente. Nulo = automático.
+    ///
+    /// Existe porque el sistema operativo de cada persona decide qué puede recibir: la app de
+    /// bandeja es de Windows, y quien trabaja en Mac o Linux necesita otra cosa. Y eso es **por
+    /// persona y no por proyecto**, aunque los proyectos tiendan a agrupar sistemas —el equipo de
+    /// video en Mac, el de backend mezclado—: la misma persona está en varios proyectos y sigue
+    /// teniendo una sola computadora.
+    ///
+    /// En automático se usa el primer canal personal que diga que puede entregar. Fijarlo sirve
+    /// para quien tiene dos —la app instalada y Slack vinculado— y quiere que le lleguen por uno.
+    /// El correo nunca se elige acá: no es un canal personal sino el último recurso de todos.</summary>
+    public NotificationChannel? PreferredChannel { get; set; }
+
     /// <summary>Puede asignar tareas a otros o cambiar asignaciones.
     ///
     /// Se suma al permiso del proyecto —hay que liderarlo *y* tener esto— y arranca en `true`

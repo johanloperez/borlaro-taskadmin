@@ -711,4 +711,9 @@ export const pt: Dictionary = {
   'nav.expandMenu': 'Expandir menu',
   'nav.openMenu': 'Abrir menu',
   'nav.closeMenu': 'Fechar menu',
+  'people.preferredChannel': 'Por onde o agente escreve',
+  'people.channelAuto': 'Automático',
+  'people.channelDesktop': 'App da bandeja (Windows)',
+  'people.channelSlack': 'Slack',
+  'people.channelHelp': 'O e-mail não é opção aqui: é o último recurso de todos, depois dos dois primeiros degraus.',
 }

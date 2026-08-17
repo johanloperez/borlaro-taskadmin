@@ -17,6 +17,9 @@ export interface AdminUser {
   canAssignTasks: boolean
   canSetDueDate: boolean
   canCreateTasks: boolean
+  /** Por dónde prefiere recibir el check-in. Null = automático. El correo no es una opción: es
+   *  el último recurso de la escalera, no un canal personal. */
+  preferredChannel: 'Desktop' | 'Slack' | null
   openItems: number
   createdAt: string
   /** False en las cuentas que entran solo por el proveedor externo. */
@@ -106,7 +109,11 @@ export function useEditUser() {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string } & Partial<
       Omit<AdminUser, 'id' | 'openItems' | 'createdAt' | 'email' | 'hasPassword' | 'externalLogin'>
-    >) => api<AdminUser>(`/api/users/${id}`, { method: 'PATCH', body }),
+    > & {
+      /** Volver a automático. Hace falta aparte del nulable: sin esto el servidor no distingue
+       *  «no mandé el campo» de «lo quiero vacío». */
+      clearPreferredChannel?: boolean
+    }) => api<AdminUser>(`/api/users/${id}`, { method: 'PATCH', body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.users }),
   })
 }

@@ -136,11 +136,17 @@ public enum NotificationChannel
 }
 
 /// <summary>Peldaño de la escalera de entrega. El orden importa: el scheduler avanza
-/// al siguiente solo si el anterior no obtuvo acuse de apertura.</summary>
+/// al siguiente solo si el anterior no obtuvo acuse de apertura.
+///
+/// **Los peldaños nombran un rol, no un canal.** Los dos primeros van por el canal personal de
+/// cada quien —la app de bandeja en Windows, Slack en un Mac— y los dos siguientes por correo,
+/// que es el último recurso de todos porque no requiere que la persona haya instalado ni
+/// vinculado nada. Antes se llamaban `FirstDesktopToast` y `SecondDesktopToast`, y ese nombre
+/// era el que ataba la escalera a un solo canal.</summary>
 public enum EscalationStep
 {
-    FirstDesktopToast = 0,
-    SecondDesktopToast = 1,
+    FirstDirectPing = 0,
+    SecondDirectPing = 1,
     FirstEmail = 2,
     SecondEmailAndManagerFeed = 3,
     MarkedMissed = 4

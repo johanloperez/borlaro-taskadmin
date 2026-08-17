@@ -223,6 +223,31 @@ function UserRow({ user }: { user: AdminUser }) {
             {t('people.receivesCheckIn')}
           </label>
 
+          {/* Por dónde le escribe el agente. Es una propiedad de la persona y no del proyecto:
+              el sistema operativo lo decide la computadora que tiene, y esa es la misma esté en
+              el proyecto que esté. En automático se usa el primero que pueda entregar. */}
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-ink-muted">{t('people.preferredChannel')}</p>
+            <select
+              value={user.preferredChannel ?? ''}
+              onChange={(e) =>
+                run(
+                  edit.mutateAsync(
+                    e.target.value === ''
+                      ? { id: user.id, clearPreferredChannel: true }
+                      : { id: user.id, preferredChannel: e.target.value as 'Desktop' | 'Slack' },
+                  ),
+                )
+              }
+              className="h-9 rounded-lg border border-line bg-canvas px-2 text-sm"
+            >
+              <option value="">{t('people.channelAuto')}</option>
+              <option value="Desktop">{t('people.channelDesktop')}</option>
+              <option value="Slack">{t('people.channelSlack')}</option>
+            </select>
+            <p className="text-[11px] text-ink-subtle">{t('people.channelHelp')}</p>
+          </div>
+
           {/* Los tres permisos por persona. Se comprueban además del permiso sobre el proyecto:
               encenderlos no mete a nadie en un tablero ajeno, solo deciden qué puede hacer ahí
               donde ya entra. Nacen encendidos porque son restricciones, no concesiones — y por eso

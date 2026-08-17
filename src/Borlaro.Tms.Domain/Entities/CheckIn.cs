@@ -32,7 +32,7 @@ public class CheckIn : IOrganizationScoped
     public DateTimeOffset? CompletedAt { get; set; }
 
     /// <summary>Peldaño alcanzado por la escalera de entrega.</summary>
-    public EscalationStep EscalationStep { get; set; } = EscalationStep.FirstDesktopToast;
+    public EscalationStep EscalationStep { get; set; } = EscalationStep.FirstDirectPing;
 
     /// <summary>Cuándo corresponde evaluar el próximo peldaño. El scheduler solo mira filas
     /// con este campo vencido, así no recorre toda la tabla.</summary>

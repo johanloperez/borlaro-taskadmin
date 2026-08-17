@@ -47,7 +47,7 @@ y [§9 del plan](docs/PLAN.md).
 | Rondas de revisión: aprobar / pedir cambios | ✅ probado |
 | Formulario público de intake con límite de tasa | ✅ probado |
 | Hub SignalR con heartbeat y doble acuse | ✅ probado |
-| Escalera de entrega (5 peldaños, Desktop → Email → manager) | ✅ probado |
+| Escalera de entrega (5 peldaños, canal de cada persona → Email → líder) | ⚠️ desplegado; sin probar con dos canales — [§20](docs/PLAN.md) |
 | Programador de check-ins por zona horaria | ✅ probado |
 | App de escritorio WPF en bandeja | ⚠️ conecta y late; la interfaz no está probada |
 | ABM de personas con roles y horario de check-in | ✅ probado |

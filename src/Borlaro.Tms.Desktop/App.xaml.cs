@@ -130,6 +130,15 @@ public partial class App : System.Windows.Application
             "Borlaro TMS", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
+    /// <summary>Cómo se llamaba la entrada de autoarranque antes del renombre a Borlaro TMS.
+    ///
+    /// Se borra al arrancar, y no es limpieza cosmética: la entrada vieja apunta a
+    /// `TaskAdmin.exe`, un binario que dejó de existir cuando el proyecto pasó a llamarse
+    /// `Borlaro.Tms.Desktop` y el ejecutable a `BorlaroTms.exe`. Windows la ejecuta igual en cada
+    /// inicio de sesión y falla con un error que parece de la aplicación —y no lo es, porque la
+    /// aplicación buena arranca al lado desde la entrada nueva.</summary>
+    private const string LegacyRunValueName = "TaskAdmin";
+
     /// <summary>Autoarranque por la clave Run del usuario: no requiere permisos de
     /// administrador, a diferencia de un servicio o de la rama HKLM.</summary>
     private void EnsureAutoStart()
@@ -143,6 +152,13 @@ public partial class App : System.Windows.Application
             if (key?.GetValue(RunValueName) as string != exePath)
             {
                 key?.SetValue(RunValueName, exePath);
+            }
+
+            // Solo si existe: DeleteValue tira si el nombre no está, y acá una excepción se
+            // comería el registro del autoarranque que acabamos de escribir.
+            if (key?.GetValue(LegacyRunValueName) is not null)
+            {
+                key.DeleteValue(LegacyRunValueName, throwOnMissingValue: false);
             }
         }
         catch

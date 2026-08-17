@@ -64,7 +64,7 @@ public class EscalationService(
     {
         using var scope = OrganizationScope.Use(checkIn.OrganizationId);
 
-        checkIn.EscalationStep = EscalationStep.FirstDesktopToast;
+        checkIn.EscalationStep = EscalationStep.FirstDirectPing;
         await AdvanceAsync(checkIn, DateTimeOffset.UtcNow, ct, isFirst: true);
         await db.SaveChangesAsync(ct);
     }
@@ -75,7 +75,7 @@ public class EscalationService(
         CancellationToken ct,
         bool isFirst = false)
     {
-        var step = isFirst ? EscalationStep.FirstDesktopToast : NextStep(checkIn.EscalationStep);
+        var step = isFirst ? EscalationStep.FirstDirectPing : NextStep(checkIn.EscalationStep);
         var user = checkIn.User ?? await db.Users.FirstAsync(u => u.Id == checkIn.UserId, ct);
 
         if (step == EscalationStep.MarkedMissed)
@@ -89,42 +89,66 @@ public class EscalationService(
             return;
         }
 
-        var channelKind = step is EscalationStep.FirstDesktopToast or EscalationStep.SecondDesktopToast
-            ? NotificationChannel.Desktop
-            : NotificationChannel.Email;
-
-        var channel = channels.FirstOrDefault(c => c.Kind == channelKind);
+        var esPersonal = step is EscalationStep.FirstDirectPing or EscalationStep.SecondDirectPing;
         var payload = await BuildPayloadAsync(step, user, checkIn, ct);
 
-        if (channel is null)
-        {
-            RecordAttempt(checkIn, channelKind, step, now, DeliveryResult.Failed("canal no registrado"));
-        }
-        else if (!await channel.CanDeliverAsync(user, ct))
-        {
-            // Peldaño saltado: sin heartbeat vivo no tiene sentido gastar los 15 y 45 minutos
-            // de los toasts esperando un acuse imposible. Se salta directo al email.
-            RecordAttempt(checkIn, channelKind, step, now, DeliveryResult.Failed("canal no disponible"));
+        // El peldaño dice el rol; el canal concreto sale de la persona. En los dos primeros se
+        // prueban sus canales personales en orden y se usa el primero que pueda entregar ahora
+        // mismo; en los dos últimos, el correo, que es el único que no exige haber instalado ni
+        // vinculado nada.
+        var candidatos = esPersonal
+            ? await PersonalChannelsAsync(user, ct)
+            : channels.Where(c => c.Kind == NotificationChannel.Email).ToList();
 
-            if (channelKind == NotificationChannel.Desktop)
-            {
-                checkIn.EscalationStep = EscalationStep.SecondDesktopToast;
-                checkIn.NextEscalationAt = now;
-                return;
-            }
+        if (candidatos.Count == 0)
+        {
+            RecordAttempt(checkIn, user.PreferredChannel ?? NotificationChannel.Email, step, now,
+                DeliveryResult.Failed("canal no registrado"));
         }
         else
         {
-            var result = await channel.SendAsync(user, payload, ct);
-            RecordAttempt(checkIn, channelKind, step, now, result);
+            INotificationChannel? elegido = null;
 
-            if (result.Delivered && channelKind == NotificationChannel.Email)
+            foreach (var candidato in candidatos)
             {
-                // El email no tiene acuse de apertura confiable, así que se cuenta como
-                // entregado al mandarlo. Lo que sigue faltando es que lo abran.
-                checkIn.DeliveredAt ??= now;
-                checkIn.DeliveredVia ??= NotificationChannel.Email;
-                if (checkIn.Status == CheckInStatus.Pending) checkIn.Status = CheckInStatus.Delivered;
+                if (await candidato.CanDeliverAsync(user, ct))
+                {
+                    elegido = candidato;
+                    break;
+                }
+
+                // Queda registrado por qué no se usó: «no le llegó» y «no había por dónde» son
+                // dos historias distintas cuando alguien pregunta al día siguiente.
+                RecordAttempt(checkIn, candidato.Kind, step, now,
+                    DeliveryResult.Failed("canal no disponible"));
+            }
+
+            if (elegido is null)
+            {
+                // Ningún canal personal puede entregar —nadie con la app abierta, nadie con Slack
+                // vinculado—. No tiene sentido gastar los 15 y 45 minutos de los dos primeros
+                // peldaños esperando un acuse imposible: se salta directo al correo.
+                if (esPersonal)
+                {
+                    checkIn.EscalationStep = EscalationStep.SecondDirectPing;
+                    checkIn.NextEscalationAt = now;
+                    return;
+                }
+            }
+            else
+            {
+                var result = await elegido.SendAsync(user, payload, ct);
+                RecordAttempt(checkIn, elegido.Kind, step, now, result);
+
+                // Solo el escritorio tiene acuse de apertura de verdad. Los demás se cuentan como
+                // entregados al mandarlos, y lo que sigue faltando es que la persona lo abra —que
+                // es lo que detiene la escalera, no la entrega.
+                if (result.Delivered && elegido.Kind != NotificationChannel.Desktop)
+                {
+                    checkIn.DeliveredAt ??= now;
+                    checkIn.DeliveredVia ??= elegido.Kind;
+                    if (checkIn.Status == CheckInStatus.Pending) checkIn.Status = CheckInStatus.Delivered;
+                }
             }
         }
 
@@ -132,10 +156,27 @@ public class EscalationService(
         checkIn.NextEscalationAt = ScheduleNext(checkIn, step);
     }
 
+    /// <summary>Los canales personales de esta persona, en el orden en que hay que probarlos.
+    ///
+    /// «Personal» es todo menos el correo y menos `InApp`: el correo es el último recurso de la
+    /// escalera y no compite acá, e `InApp` no le avisa a nadie —es la campana que se ve cuando ya
+    /// entraste—. El preferido va primero si lo eligió; el resto queda en el orden del enum, que
+    /// es estable.</summary>
+    private async Task<List<INotificationChannel>> PersonalChannelsAsync(User user, CancellationToken ct)
+    {
+        await Task.CompletedTask;
+
+        return channels
+            .Where(c => c.Kind is not (NotificationChannel.Email or NotificationChannel.InApp))
+            .OrderBy(c => c.Kind == user.PreferredChannel ? 0 : 1)
+            .ThenBy(c => (int)c.Kind)
+            .ToList();
+    }
+
     private static EscalationStep NextStep(EscalationStep current) => current switch
     {
-        EscalationStep.FirstDesktopToast => EscalationStep.SecondDesktopToast,
-        EscalationStep.SecondDesktopToast => EscalationStep.FirstEmail,
+        EscalationStep.FirstDirectPing => EscalationStep.SecondDirectPing,
+        EscalationStep.SecondDirectPing => EscalationStep.FirstEmail,
         EscalationStep.FirstEmail => EscalationStep.SecondEmailAndManagerFeed,
         _ => EscalationStep.MarkedMissed
     };
@@ -148,8 +189,8 @@ public class EscalationService(
 
         return completed switch
         {
-            EscalationStep.FirstDesktopToast => origin.AddMinutes(_options.SecondToastAfterMinutes),
-            EscalationStep.SecondDesktopToast => origin.AddMinutes(_options.FirstEmailAfterMinutes),
+            EscalationStep.FirstDirectPing => origin.AddMinutes(_options.SecondToastAfterMinutes),
+            EscalationStep.SecondDirectPing => origin.AddMinutes(_options.FirstEmailAfterMinutes),
             EscalationStep.FirstEmail => origin.AddMinutes(_options.SecondEmailAfterMinutes),
             EscalationStep.SecondEmailAndManagerFeed => origin.AddMinutes(_options.MarkMissedAfterMinutes),
             _ => null
@@ -162,7 +203,7 @@ public class EscalationService(
         CheckIn checkIn,
         CancellationToken ct)
     {
-        var insistent = step != EscalationStep.FirstDesktopToast;
+        var insistent = step != EscalationStep.FirstDirectPing;
 
         return new NotificationPayload(
             Kind: "checkin",

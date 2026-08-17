@@ -26,6 +26,8 @@ public record AdminUserDto(
     bool CanAssignTasks,
     bool CanSetDueDate,
     bool CanCreateTasks,
+    /// <summary>Por dónde prefiere recibir el check-in. Null = automático.</summary>
+    NotificationChannel? PreferredChannel,
     int OpenItems,
     DateTimeOffset CreatedAt,
     /// <summary>False en las cuentas que entran solo por el proveedor externo.</summary>
@@ -57,7 +59,11 @@ public record EditUserBody(
     bool? CheckInsEnabled,
     bool? CanAssignTasks = null,
     bool? CanSetDueDate = null,
-    bool? CanCreateTasks = null);
+    bool? CanCreateTasks = null,
+    /// <summary>Canal preferido. `ClearPreferredChannel` es lo que permite volver a automático:
+    /// con solo el nulable no se distingue «no lo mandé» de «lo quiero vacío».</summary>
+    NotificationChannel? PreferredChannel = null,
+    bool ClearPreferredChannel = false);
 
 public record NewPasswordBody([Required] string Password);
 
@@ -85,7 +91,7 @@ public static class UserEndpoints
                 .Select(u => new AdminUserDto(
                     u.Id, u.Email, u.Name, u.Role, u.IsActive, u.TimeZoneId, u.CheckInTime,
                     u.WorkDaysMask, u.CheckInsEnabled,
-                    u.CanAssignTasks, u.CanSetDueDate, u.CanCreateTasks,
+                    u.CanAssignTasks, u.CanSetDueDate, u.CanCreateTasks, u.PreferredChannel,
                     db.WorkItems.Count(i => i.AssigneeId == u.Id && i.ClosedAt == null),
                     u.CreatedAt,
                     u.PasswordHash != "",
@@ -250,6 +256,21 @@ public static class UserEndpoints
             if (body.CanAssignTasks is not null) user.CanAssignTasks = body.CanAssignTasks.Value;
             if (body.CanSetDueDate is not null) user.CanSetDueDate = body.CanSetDueDate.Value;
             if (body.CanCreateTasks is not null) user.CanCreateTasks = body.CanCreateTasks.Value;
+
+            // El correo no es un canal personal: es el último recurso de la escalera, y elegirlo
+            // como preferido dejaría a alguien sin los dos primeros peldaños sin querer.
+            if (body.ClearPreferredChannel) user.PreferredChannel = null;
+            else if (body.PreferredChannel is { } canal)
+            {
+                if (canal is NotificationChannel.Email or NotificationChannel.InApp)
+                {
+                    return Results.Problem(
+                        "El correo no se elige como canal preferido: ya es el último recurso de todos.",
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                user.PreferredChannel = canal;
+            }
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(await OneAsync(db, user.Id, ct));
@@ -434,7 +455,7 @@ public static class UserEndpoints
             .Select(u => new AdminUserDto(
                 u.Id, u.Email, u.Name, u.Role, u.IsActive, u.TimeZoneId, u.CheckInTime,
                 u.WorkDaysMask, u.CheckInsEnabled,
-                u.CanAssignTasks, u.CanSetDueDate, u.CanCreateTasks,
+                u.CanAssignTasks, u.CanSetDueDate, u.CanCreateTasks, u.PreferredChannel,
                 db.WorkItems.Count(i => i.AssigneeId == u.Id && i.ClosedAt == null),
                 u.CreatedAt,
                 u.PasswordHash != "",
