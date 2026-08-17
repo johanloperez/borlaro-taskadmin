@@ -25,6 +25,20 @@
 	# accesible por su nombre sin extensión, y el resto sigue yendo a la aplicación.
 	handle {
 		root * /srv/web
+
+		# Los assets llevan hash en el nombre (index-DHdB7pTq.js), asi que su contenido nunca
+		# cambia: un nombre distinto es un archivo distinto. Se cachean para siempre.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		# El index.html, en cambio, NO se cachea nunca: es el unico archivo con nombre fijo, y es
+		# el que dice cual es el bundle vigente. Sin esta linea el navegador se lo queda por
+		# heuristica y sigue pidiendo el bundle del despliegue anterior — la aplicacion se ve
+		# vieja despues de actualizar y solo se arregla con recarga forzada, que no se le puede
+		# pedir a cada persona del equipo en cada version.
+		@html path / /index.html *.html
+		header @html Cache-Control "no-cache"
+
 		try_files {path} {path}.html /index.html
 		file_server
 	}

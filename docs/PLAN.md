@@ -976,7 +976,22 @@ La descripción se manda **solo si cambió**: el servidor registra «descripció
 
 ---
 
-## Fuentes
+## 22. Que un despliegue se vea
+
+**El problema, y cómo se manifestó.** Después de desplegar una pantalla nueva, la aplicación seguía viéndose igual. El bundle correcto estaba servido y el `index.html` lo referenciaba bien; lo que fallaba era el navegador, que se quedaba con el `index.html` anterior y por lo tanto seguía pidiendo el bundle del despliegue previo.
+
+Caddy no mandaba **ninguna** cabecera de caché, así que los navegadores aplicaban su heurística. La consecuencia práctica es peor que un archivo viejo: **cada despliegue dependía de que cada persona del equipo hiciera una recarga forzada**, y eso no se puede pedir. Peor todavía, es una falla que no se ve desde el servidor —ahí está todo bien— y que se diagnostica como «no se desplegó».
+
+**La regla, que son dos mitades y ninguna sirve sola:**
+
+| Qué | Cabecera | Por qué |
+|---|---|---|
+| `/assets/*` | `max-age=31536000, immutable` | El nombre lleva hash (`index-DHdB7pTq.js`): un contenido distinto es un nombre distinto, así que el archivo nunca cambia y cachearlo un año es correcto |
+| `index.html` y `*.html` | `no-cache` | Es el único archivo con nombre fijo, y el que dice cuál bundle está vigente. Si se cachea, todo lo demás da igual |
+
+`no-cache` no significa «no guardar»: significa revalidar antes de usar. El navegador conserva la copia y pregunta con el ETag, así que el costo es un 304 y no una descarga.
+
+✅ **Construido y verificado**: `curl -I` devuelve `no-cache` en el index y `immutable` en los assets.
 
 - [Best Bug Issue Tracking Software, Ranked for 2026 — Gitnux](https://gitnux.org/best/bug-issue-tracking-software/)
 - [Linear vs Jira 2026 — PromptedDev](https://prompteddev.com/blog/linear-vs-jira/)
