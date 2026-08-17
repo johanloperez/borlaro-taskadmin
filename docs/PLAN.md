@@ -925,6 +925,26 @@ Si alguna vez hace falta un cliente nativo —una empresa que no use Slack ni Te
 
 ---
 
+## 21. La descripción de la tarea, en Markdown
+
+**El problema.** `WorkItems.DescriptionMd` existía desde el esquema inicial y la API lo aceptaba al crear y al editar, pero **ninguna pantalla lo mostraba**: el campo aparecía solo en los tipos del frontend. Una tarea era un título y nada más, así que el contexto vivía en la cabeza de quien la creó — y el agente, que lee el tablero y no las conversaciones de pasillo, tampoco lo tenía.
+
+Es el tercer caso del mismo patrón, después de la fecha de entrega y la estimación: lógica del servidor que ninguna interfaz usa. La regla —**nunca debe existir lógica en el backend que el front no use**— es lo que los detectó a los tres.
+
+**Markdown y no texto plano**, que es lo que el nombre del campo prometía desde el principio. En una descripción de tarea se pegan listas de verificación, enlaces y fragmentos de código, y en texto plano todo eso queda ilegible. Se guarda **el fuente, no HTML**: lo escrito sigue siendo editable y no entra marcado ajeno a la base.
+
+**La decisión que importa: se renderiza con `react-markdown`, no con un renderizador propio.** Escribir uno a mano termina indefectiblemente en `dangerouslySetInnerHTML`, y ahí cualquiera que cree una tarea ejecuta código en la pantalla de quien la lea. `react-markdown` ignora el HTML crudo por defecto y **`rehype-raw` no se habilita** — si alguien lo agrega alguna vez, está reabriendo exactamente ese agujero. Todo vive en `web/src/components/Markdown.tsx` para que la decisión se revise en un solo archivo.
+
+**Dónde está y dónde no.** En el panel de detalle, debajo del título, con alternancia entre editar y vista previa. **No** en el formulario rápido de creación: ese existe para anotar algo en dos segundos desde la columna, y un área de ocho líneas lo convierte en un trámite —el mismo criterio por el que ahí tampoco están los campos personalizados no obligatorios—.
+
+La descripción se manda **solo si cambió**: el servidor registra «descripción actualizada» ante cualquier valor que reciba, y mandarla siempre ensuciaba el historial en cada guardado de título.
+
+✅ **Construido y verificado**: compila, el typecheck pasa y el editor viaja en el bundle que sirve la instalación.
+
+⏳ **Pendiente:** que el agente la lea. Hoy conoce el título y nada más, y la descripción es justo el contexto que le falta para no preguntar lo obvio. No se hizo todavía porque el contexto ya lleva diez herramientas y el tablero entero, y con un modelo local de 16k meter la descripción de todas las tareas es la forma más rápida de que pierda las definiciones de herramientas en silencio (§11). Si se agrega, acotado: solo la de la tarea que se está conversando, y recortada.
+
+---
+
 ## Fuentes
 
 - [Best Bug Issue Tracking Software, Ranked for 2026 — Gitnux](https://gitnux.org/best/bug-issue-tracking-software/)

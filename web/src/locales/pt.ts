@@ -716,4 +716,9 @@ export const pt: Dictionary = {
   'people.channelDesktop': 'App da bandeja (Windows)',
   'people.channelSlack': 'Slack',
   'people.channelHelp': 'O e-mail não é opção aqui: é o último recurso de todos, depois dos dois primeiros degraus.',
+  'item.description': 'Descrição',
+  'item.descriptionPreview': 'Pré-visualizar',
+  'item.descriptionEdit': 'Editar',
+  'item.descriptionEmpty': 'Ainda sem descrição.',
+  'item.descriptionPlaceholder': 'O que precisa ser feito, e o necessário para entender sem perguntar. Markdown funciona: listas, links, código.',
 }

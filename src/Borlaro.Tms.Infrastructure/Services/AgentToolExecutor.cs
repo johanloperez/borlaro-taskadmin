@@ -254,14 +254,26 @@ public class AgentToolExecutor(
         // garantiza que tarde o temprano el total y la tabla cuenten cosas distintas.
         await db.Entry(item).Collection(i => i.TimeExtensions).LoadAsync(ct);
 
-        item.TimeExtensions.Add(new WorkItemTimeExtension
+        var ampliacion = new WorkItemTimeExtension
         {
             WorkItemId = item.Id,
             Hours = horas,
             Reason = motivo,
             ActorType = ActorType.Agent,
             CheckInId = checkIn.Id
-        });
+        };
+
+        // Se registra en el DbSet y **además** en la colección, y las dos cosas son necesarias.
+        //
+        // Solo por la colección no alcanza: la entidad nace con su `Id` ya asignado, y EF la toma
+        // por existente y emite un UPDATE en vez de un INSERT. Como la fila todavía no está, la
+        // sentencia afecta cero filas y `SaveChanges` tira `DbUpdateConcurrencyException` — que
+        // llegaba al agente como un 500 al responderle.
+        //
+        // Y solo por el DbSet tampoco: `RecalcularAddedHours` suma sobre la colección cargada, así
+        // que si la ampliación no está ahí el total queda sin contarla.
+        db.WorkItemTimeExtensions.Add(ampliacion);
+        item.TimeExtensions.Add(ampliacion);
 
         item.RecalcularAddedHours();
         item.UpdatedAt = DateTimeOffset.UtcNow;

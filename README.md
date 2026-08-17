@@ -64,6 +64,7 @@ y [§9 del plan](docs/PLAN.md).
 | Relevo: responsable por etapa y aviso al recibir | ✅ probado de punta a punta |
 | Varios responsables por etapa, con reparto por menor carga | ⚠️ desplegado con interfaz; sin probar en uso — [§12](docs/PLAN.md) |
 | Archivar proyectos, con deshacer | ✅ construido — [§17](docs/PLAN.md) |
+| Descripción de la tarea en Markdown, con vista previa | ✅ desplegado — [§21](docs/PLAN.md) |
 | Estimación original + ampliaciones anulables, dificultad, `add_time_estimate` | ⚠️ desplegado y migrado; sin probar en uso — [§19](docs/PLAN.md) |
 | Novedades del líder: `/novedades`, campana y las 6 clases de aviso | ⚠️ desplegado; sin probar en uso — [§19](docs/PLAN.md) |
 | Permisos por persona: asignar, fijar fechas, crear tareas | ⚠️ desplegado; sin probar en uso — [§19](docs/PLAN.md) |

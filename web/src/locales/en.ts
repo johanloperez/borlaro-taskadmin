@@ -719,4 +719,9 @@ export const en = {
   'people.channelDesktop': 'Tray app (Windows)',
   'people.channelSlack': 'Slack',
   'people.channelHelp': 'Email is not an option here: it is everyone’s last resort, after the first two rungs.',
+  'item.description': 'Description',
+  'item.descriptionPreview': 'Preview',
+  'item.descriptionEdit': 'Edit',
+  'item.descriptionEmpty': 'No description yet.',
+  'item.descriptionPlaceholder': 'What has to be done, and anything needed to understand it without asking. Markdown works: lists, links, code.',
 }

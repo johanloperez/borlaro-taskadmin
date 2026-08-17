@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Bot, X, Loader2, Trash2 } from 'lucide-react'
 import { CustomFieldInput } from '@/components/CustomFieldInput'
 import { DeliverablesSection } from '@/components/DeliverablesSection'
+import { Markdown } from '@/components/Markdown'
 import {
   useDeleteItem,
   useItemEvents,
@@ -57,6 +58,8 @@ export function ItemDetailPanel({
   const [priority, setPriority] = useState<WorkItemPriority>(item.priority)
   const [progress, setProgress] = useState(item.progressPct)
   const [difficulty, setDifficulty] = useState<WorkItemDifficulty>(item.difficulty)
+  const [description, setDescription] = useState(item.descriptionMd)
+  const [previewing, setPreviewing] = useState(false)
   const [dueDate, setDueDate] = useState(item.dueDate ?? '')
   const [estimate, setEstimate] = useState(item.estimate === null ? '' : String(item.estimate))
   const [fields, setFields] = useState<Record<string, unknown>>(item.customFields ?? {})
@@ -69,6 +72,8 @@ export function ItemDetailPanel({
     setPriority(item.priority)
     setProgress(item.progressPct)
     setDifficulty(item.difficulty)
+    setDescription(item.descriptionMd)
+    setPreviewing(false)
     setDueDate(item.dueDate ?? '')
     setEstimate(item.estimate === null ? '' : String(item.estimate))
     setFields(item.customFields ?? {})
@@ -87,6 +92,9 @@ export function ItemDetailPanel({
       await update.mutateAsync({
         id: item.id,
         title,
+        // Solo si cambió: el servidor registra «descripción actualizada» ante cualquier valor
+        // que le llegue, y mandarla siempre ensuciaría el historial en cada guardado de título.
+        descriptionMd: description === item.descriptionMd ? undefined : description,
         priority,
         difficulty,
         // Vacío no se manda: el backend rechaza un campo presente en nulo, y «lo dejé como
@@ -104,6 +112,7 @@ export function ItemDetailPanel({
   const dirty =
     title !== item.title ||
     priority !== item.priority ||
+    description !== item.descriptionMd ||
     difficulty !== item.difficulty ||
     dueDate !== (item.dueDate ?? '') ||
     estimate !== (item.estimate === null ? '' : String(item.estimate)) ||
@@ -257,6 +266,50 @@ export function ItemDetailPanel({
             className="w-full rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm
                        focus:border-accent focus:outline-none"
           />
+        </div>
+
+        {/* El enunciado va debajo del título y ocupa lugar de verdad. Una tarea que solo tiene
+            título obliga a que el contexto viva en la cabeza de quien la creó, y el agente —que
+            lee el tablero, no la conversación de pasillo— tampoco lo tiene.
+
+            Markdown y no texto plano porque acá se pegan checklists, enlaces y fragmentos de
+            código, y en texto plano todo eso queda ilegible. Se guarda el fuente, no HTML: lo que
+            se escribió sigue siendo editable y no hay marcado ajeno entrando a la base. */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-medium text-ink-muted">
+              {t('item.description')}
+            </label>
+
+            <button
+              type="button"
+              onClick={() => setPreviewing((v) => !v)}
+              className="rounded-md px-1.5 py-0.5 text-[11px] text-ink-muted hover:bg-canvas hover:text-ink"
+            >
+              {previewing ? t('item.descriptionEdit') : t('item.descriptionPreview')}
+            </button>
+          </div>
+
+          {previewing ? (
+            <div
+              className="min-h-32 rounded-lg border border-line bg-canvas px-2.5 py-2 text-sm"
+            >
+              {description.trim() ? (
+                <Markdown>{description}</Markdown>
+              ) : (
+                <p className="text-ink-subtle">{t('item.descriptionEmpty')}</p>
+              )}
+            </div>
+          ) : (
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={8}
+              placeholder={t('item.descriptionPlaceholder')}
+              className="w-full resize-y rounded-lg border border-line bg-canvas px-2.5 py-2
+                         font-mono text-sm leading-relaxed focus:border-accent focus:outline-none"
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
