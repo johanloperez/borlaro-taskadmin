@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -11,15 +11,13 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { AlertTriangle, Loader2, Maximize2, Plus, Share2, UserCog, UserPlus, X } from 'lucide-react'
+import { AlertTriangle, Loader2, Plus, Share2, UserCog, UserPlus, X } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
-import { CustomFieldInput } from '@/components/CustomFieldInput'
 import { ItemDetailPanel } from '@/components/ItemDetailPanel'
 import { TeamAside, TeamButton } from '@/components/TeamPanel'
 import { initials } from '@/lib/people'
 import {
   useBoard,
-  useCreateItem,
   useEnableIntake,
   useProject,
   useStageResponsibles,
@@ -31,14 +29,10 @@ import { ApiError } from '@/lib/api'
 import { CreateItemDialog } from '@/components/CreateItemDialog'
 import { useBoardRealtime } from '@/lib/realtime'
 import {
-  difficultyLabel,
   priorityLabel,
   stageDot,
-  type CustomFieldDef,
-  type DifficultyLabels,
   type Stage,
   type WorkItem,
-  type WorkItemDifficulty,
 } from '@/lib/types'
 import { cn } from '@/lib/cn'
 import { useT } from '@/lib/i18n'
@@ -73,7 +67,6 @@ export function BoardPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [blockerPrompt, setBlockerPrompt] = useState<{ item: WorkItem; stage: Stage } | null>(null)
   const [fullCreate, setFullCreate] = useState(false)
-  const [adding, setAdding] = useState(false)
 
   const sensors = useSensors(
     // 6px de holgura: sin esto, un click en la tarjeta se interpreta como arrastre y nunca
@@ -153,7 +146,7 @@ export function BoardPage() {
 
           {p.permissions.canCreateWork && (
             <button
-              onClick={() => setAdding(true)}
+              onClick={() => setFullCreate(true)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1.5 text-sm
                          font-medium text-accent-ink hover:bg-accent-hover"
             >
@@ -243,19 +236,6 @@ export function BoardPage() {
             </div>
           )}
 
-          {adding && (
-            <NewItemForm
-              onExpand={() => {
-                setAdding(false)
-                setFullCreate(true)
-              }}
-              projectKey={p.key}
-              types={p.workItemTypes}
-              fields={p.customFields}
-              labels={p.difficultyLabels}
-              onDone={() => setAdding(false)}
-            />
-          )}
 
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="flex-1 overflow-x-auto">
@@ -736,181 +716,3 @@ function BlockerDialog({
   )
 }
 
-function NewItemForm({
-  projectKey,
-  types,
-  fields,
-  labels,
-  onDone,
-  onExpand,
-}: {
-  projectKey: string
-  types: string[]
-  fields: CustomFieldDef[]
-  labels: DifficultyLabels
-  onDone: () => void
-  /** Pasar al alta completa, con descripción y adjuntos. Lo que ya se escribió no se arrastra:
-   *  el título de dos palabras del alta rápida rara vez es el que uno quiere en un brief. */
-  onExpand: () => void
-}) {
-  const t = useT()
-  const create = useCreateItem(projectKey)
-  const [title, setTitle] = useState('')
-  const [type, setType] = useState(types[0] ?? 'Tarea')
-  const [dueDate, setDueDate] = useState('')
-  const [estimate, setEstimate] = useState('')
-  const [difficulty, setDifficulty] = useState<'' | WorkItemDifficulty>('')
-  const [values, setValues] = useState<Record<string, unknown>>({})
-  const [error, setError] = useState<string | null>(null)
-
-  // Solo los obligatorios. El resto se completa después desde el detalle: este formulario es para
-  // anotar rápido algo que hay que hacer, y meterle diez campos lo convierte en un trámite.
-  //
-  // Los obligatorios sí van, porque sin ellos el servidor rechaza la creación — y antes de esto
-  // el rechazo llegaba como «entorno es obligatorio» sin que hubiera ningún lugar donde ponerlo.
-  const required = fields.filter((f) => f.required)
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    setError(null)
-    try {
-      await create.mutateAsync({
-        title,
-        type,
-        dueDate: dueDate || null,
-        // Vacío es «no lo sé todavía», que no es lo mismo que cero: cero horas estimadas diría
-        // que la tarea no cuesta nada, y eso después aparece como una subestimación gigante.
-        estimate: estimate === '' ? null : Number(estimate),
-        difficulty: difficulty as WorkItemDifficulty,
-        customFields: required.length > 0 ? values : undefined,
-      })
-      onDone()
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('board.createFailed'))
-    }
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="mx-5 mt-3 rounded-lg border border-line bg-surface p-2"
-    >
-      <div className="flex items-center gap-2">
-      <input
-        autoFocus
-        required
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder={t('board.newTitle')}
-        className="flex-1 rounded-md border border-line bg-canvas px-2.5 py-1.5 text-sm
-                   focus:border-accent focus:outline-none"
-      />
-      <select
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
-      >
-        {types.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-      <button
-        type="submit"
-        disabled={create.isPending}
-        className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink
-                   hover:bg-accent-hover disabled:opacity-50"
-      >
-        {t('board.newCreate')}
-      </button>
-      <button
-        type="button"
-        onClick={onExpand}
-        title={t('board.expandCreate')}
-        className="rounded-md px-2 py-1.5 text-sm text-ink-muted hover:text-ink"
-      >
-        <Maximize2 className="size-4" />
-      </button>
-
-      <button type="button" onClick={onDone} className="rounded-md px-2 py-1.5 text-sm text-ink-muted">
-        <X className="size-4" />
-      </button>
-      </div>
-
-      {/* Fecha, horas y dificultad van acá y no escondidas en el detalle: son lo que decide el
-          comportamiento del agente, y un campo que hay que ir a buscar después no se completa.
-          Los tres son opcionales, así que anotar algo rápido sigue siendo escribir y Enter. */}
-      <div className="mt-2 flex flex-wrap items-end gap-2 border-t border-line pt-2">
-        <label className="text-xs text-ink-muted">
-          <span className="mb-1 block">{t('board.newDueDate')}</span>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm
-                       focus:border-accent focus:outline-none"
-          />
-        </label>
-
-        <label className="text-xs text-ink-muted">
-          <span className="mb-1 block">{t('board.newEstimate')}</span>
-          <input
-            type="number"
-            min="0"
-            step="0.5"
-            value={estimate}
-            onChange={(e) => setEstimate(e.target.value)}
-            placeholder="—"
-            className="w-24 rounded-md border border-line bg-canvas px-2 py-1.5 text-sm
-                       focus:border-accent focus:outline-none"
-          />
-        </label>
-
-        <label className="text-xs text-ink-muted">
-          <span className="mb-1 block">{t('board.newDifficulty')}</span>
-          {/* Arranca vacío y es obligatorio, no preseleccionado. Un valor puesto de fábrica se
-              acepta sin mirarlo, y entonces el nivel pasa a significar «lo que salió» en vez de
-              «lo que alguien juzgó» — y sobre eso el agente no puede modular nada. Prefiere
-              costar un clic a costar el dato. */}
-          <select
-            required
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value as WorkItemDifficulty)}
-            className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm
-                       focus:border-accent focus:outline-none"
-          >
-            <option value="" disabled>
-              {t('board.newDifficultyPick')}
-            </option>
-            {(['Baja', 'Media', 'Alta'] as const).map((level) => (
-              <option key={level} value={level}>
-                {difficultyLabel(level, labels, (l) => t(`difficulty.${l}` as const))}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {required.length > 0 && (
-        <div className="mt-2 grid gap-2 border-t border-line pt-2 sm:grid-cols-2">
-          {required.map((def) => (
-            <label key={def.id} className="text-xs text-ink-muted">
-              <span className="mb-1 block">
-                {def.label}
-                <span className="text-stage-blocked"> *</span>
-              </span>
-              <CustomFieldInput
-                def={def}
-                value={values[def.key]}
-                onChange={(value) => setValues((v) => ({ ...v, [def.key]: value }))}
-              />
-            </label>
-          ))}
-        </div>
-      )}
-
-      {error && <p className="mt-2 text-xs text-stage-blocked">{error}</p>}
-    </form>
-  )
-}

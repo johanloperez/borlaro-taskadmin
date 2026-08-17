@@ -732,7 +732,6 @@ export const pt: Dictionary = {
   'item.attachFailed': 'não pôde ser enviado',
   'item.type': 'Tipo',
   'board.createTitle': 'Nova tarefa',
-  'board.expandCreate': 'Abrir o formulário completo',
   'board.uploading': 'Enviando arquivos…',
   'board.createdButAttachFailed': 'A tarefa foi criada, mas este arquivo falhou:',
 }

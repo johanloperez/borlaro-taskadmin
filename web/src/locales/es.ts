@@ -735,7 +735,6 @@ export const es: Dictionary = {
   'item.attachFailed': 'no se pudo subir',
   'item.type': 'Tipo',
   'board.createTitle': 'Tarea nueva',
-  'board.expandCreate': 'Abrir el formulario completo',
   'board.uploading': 'Subiendo archivos…',
   'board.createdButAttachFailed': 'La tarea se creó, pero este archivo falló:',
 }

@@ -735,7 +735,6 @@ export const en = {
   'item.attachFailed': 'could not be uploaded',
   'item.type': 'Type',
   'board.createTitle': 'New task',
-  'board.expandCreate': 'Open the full form',
   'board.uploading': 'Uploading files…',
   'board.createdButAttachFailed': 'The task was created, but this file failed:',
 }

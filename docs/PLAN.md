@@ -950,9 +950,11 @@ Es el tercer caso del mismo patrón, después de la fecha de entrega y la estima
 
 **La decisión que importa: se renderiza con `react-markdown`, no con un renderizador propio.** Escribir uno a mano termina indefectiblemente en `dangerouslySetInnerHTML`, y ahí cualquiera que cree una tarea ejecuta código en la pantalla de quien la lea. `react-markdown` ignora el HTML crudo por defecto y **`rehype-raw` no se habilita** — si alguien lo agrega alguna vez, está reabriendo exactamente ese agujero. Todo vive en `web/src/components/Markdown.tsx` para que la decisión se revise en un solo archivo.
 
-**Dónde está.** En el panel de detalle, y en el **alta completa**: un modal grande con el enunciado a la izquierda y los datos a la derecha. El alta rápida en línea no se reemplazó —anotar algo en dos segundos desde la columna es un caso real y distinto de sentarse a redactar un brief— y tiene un botón que pasa al formulario completo. Es la misma división que hacen Linear y GitHub.
+**Dónde está.** En el panel de detalle, y en el **alta**: un modal grande con el enunciado a la izquierda y los datos a la derecha.
 
 **Modal y no pantalla propia**: crear una tarea es una sub-acción de estar mirando el tablero. Se quiere volver exactamente a donde se estaba y ver alrededor mientras se escribe; un takeover pierde ese contexto y obliga a navegar de vuelta.
+
+**Y es el único camino de alta.** Primero se conservó el alta rápida en línea —anotar algo en dos segundos parecía un caso distinto— con el formulario completo detrás de un ícono para ampliar. Duró un intento: quien apretaba «Crear tarea» seguía viendo el formulario de una línea y el lugar para describir estaba escondido. Dos caminos para lo mismo, con el importante detrás de un ícono, es peor que uno solo. El modal cubre igual el caso rápido —escribir el título, elegir dificultad y crear— y el alta en línea se eliminó en vez de quedar como código muerto.
 
 ### Adjuntos: lo que entra, no lo que sale
 
