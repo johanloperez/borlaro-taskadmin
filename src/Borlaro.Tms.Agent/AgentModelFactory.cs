@@ -26,7 +26,15 @@ public record AgentModelStatus(
     string Effective,
     string Model,
     bool UsingFallback,
-    string Explanation);
+    string Explanation,
+    /// <summary>Lo último que el proveedor rechazó, si rechazó algo. Es la diferencia entre «está
+    /// configurado Groq» y «Groq está devolviendo 400 porque este modelo no acepta herramientas»,
+    /// que es lo que hace falta para arreglarlo.</summary>
+    string? LastError = null,
+    DateTimeOffset? LastErrorAt = null);
+
+/// <summary>El resultado de probar un modelo de verdad: un pedido real con una herramienta.</summary>
+public record ModelProbeResult(bool Ok, bool SupportsTools, string Message);
 
 public class AgentModelFactory(
     IOptionsMonitor<AgentModelOptions> options,
@@ -174,6 +182,62 @@ public class AgentModelFactory(
         }
     }
 
+    /// <summary>Prueba el modelo de verdad: un pedido mínimo **con una herramienta declarada**.
+    ///
+    /// Existe porque la falla más cara de esta configuración es silenciosa hasta el peor momento.
+    /// Un modelo que no acepta llamado a herramientas guarda bien, aparece bien en la pantalla, y
+    /// recién falla en el primer check-in del día — con un 400 que la persona ve como «se cortó la
+    /// conexión». Declarar una herramienta en la prueba es lo único que distingue «el modelo
+    /// responde» de «el modelo sirve para esto»: sin ella, `allam-2-7b` pasaría la prueba.
+    ///
+    /// Se prueba contra lo que está escrito en pantalla y no contra lo guardado, así se descubre
+    /// antes de comprometer la configuración.</summary>
+    public async Task<ModelProbeResult> ProbeAsync(AgentModelOptions current, CancellationToken ct = default)
+    {
+        var model = Create(current);
+
+        var herramienta = new ToolDefinition(
+            "ping",
+            "Prueba de conexión. Llamala con un saludo corto.",
+            new JsonObject
+            {
+                ["type"] = "object",
+                ["properties"] = new JsonObject
+                {
+                    ["texto"] = new JsonObject { ["type"] = "string", ["description"] = "Cualquier saludo." }
+                },
+                ["required"] = new JsonArray("texto"),
+                ["additionalProperties"] = false
+            });
+
+        try
+        {
+            var turno = await model.CompleteAsync(
+                new AgentRequest(
+                    "Sos una prueba de conexión. Llamá a la herramienta ping y no digas nada más.",
+                    "Sin contexto.",
+                    [AgentMessage.FromUser("Probá la herramienta ping.")],
+                    [herramienta]),
+                ct);
+
+            // Que conteste ya prueba que la clave y la URL sirven. Que además pida la herramienta
+            // prueba lo que realmente importa. Un modelo que responde texto sin llamarla puede
+            // estar aceptando el esquema y decidiendo no usarlo, así que no se lo da por malo:
+            // se lo reporta distinto para que la persona lo pruebe con un check-in real.
+            return turno.WantsTools
+                ? new ModelProbeResult(true, true, "Responde y acepta herramientas. Sirve para el agente.")
+                : new ModelProbeResult(true, false,
+                    "Responde, pero no llamó a la herramienta de prueba. Puede que igual funcione; " +
+                    "si en el check-in no actualiza el tablero, el modelo no soporta herramientas.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // El mensaje del proveedor va tal cual: «tool calling is not supported with this
+            // model» dice exactamente qué hacer, y cualquier reescritura nuestra diría menos.
+            return new ModelProbeResult(false, false, ex.Message);
+        }
+    }
+
     public const string DefaultLocalBaseUrl = "http://host.docker.internal:11434/v1";
 
     /// <summary>El SDK también toma la clave de la variable de entorno, así que no alcanza con
@@ -182,3 +246,4 @@ public class AgentModelFactory(
         !string.IsNullOrWhiteSpace(options.ApiKey) ||
         !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"));
 }
+

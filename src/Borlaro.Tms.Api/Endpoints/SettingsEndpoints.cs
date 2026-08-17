@@ -9,6 +9,9 @@ namespace Borlaro.Tms.Api.Endpoints;
 /// <summary>Qué servidor consultar. Los dos vacíos = lo que la organización tenga guardado.</summary>
 public record ProbeModelsBody(string? BaseUrl, string? ApiKey);
 
+/// <summary>Qué modelo probar. Todo vacío = el que la organización tenga guardado.</summary>
+public record ProbeModelBody(string? Provider, string? BaseUrl, string? Model, string? ApiKey);
+
 public record SaveSettingsBody(Dictionary<string, string?> Values);
 
 /// <summary>La configuración de la instancia, editable por el admin desde la interfaz.
@@ -32,10 +35,51 @@ public static class SettingsEndpoints
         /// modelo de prueba.
         settings.MapGet("/model", async (
             AgentModelFactory factory,
+            AgentModelHealth health,
+            OrganizationSettings organization,
+            ClaimsPrincipal principal,
+            CancellationToken ct) =>
+        {
+            var status = factory.Status(await organization.AgentModelAsync(ct));
+
+            // El último rechazo del proveedor se muestra acá y no solo en el log: es la
+            // diferencia entre «está configurado Groq» y «Groq devuelve 400 porque este modelo no
+            // acepta herramientas», que es lo único que permite arreglarlo.
+            var falla = health.Ultima(principal.OrganizationId());
+
+            return Results.Ok(falla is null
+                ? status
+                : status with { LastError = falla.Message, LastErrorAt = falla.At });
+        })
+        .WithName("AgentModelStatus");
+
+        /// <summary>Prueba el modelo de verdad, con una herramienta declarada.
+        ///
+        /// Es lo que distingue «el modelo responde» de «el modelo sirve para esto». Un modelo sin
+        /// soporte de herramientas guarda bien, se ve bien, y falla recién en el primer check-in
+        /// del día — que es exactamente lo que pasó con `allam-2-7b`.</summary>
+        settings.MapPost("/model/probe", async (
+            ProbeModelBody? body,
+            AgentModelFactory factory,
             OrganizationSettings organization,
             CancellationToken ct) =>
-            Results.Ok(factory.Status(await organization.AgentModelAsync(ct))))
-        .WithName("AgentModelStatus");
+        {
+            var guardado = await organization.AgentModelAsync(ct);
+
+            // Lo escrito en pantalla gana sobre lo guardado: se prueba antes de comprometer.
+            var opciones = new AgentModelOptions
+            {
+                Provider = string.IsNullOrWhiteSpace(body?.Provider) ? guardado.Provider : body!.Provider,
+                BaseUrl = string.IsNullOrWhiteSpace(body?.BaseUrl) ? guardado.BaseUrl : body!.BaseUrl,
+                Model = string.IsNullOrWhiteSpace(body?.Model) ? guardado.Model : body!.Model,
+                ApiKey = string.IsNullOrWhiteSpace(body?.ApiKey) ? guardado.ApiKey : body!.ApiKey,
+                MaxTurns = 1,
+                MaxTokens = 256
+            };
+
+            return Results.Ok(await factory.ProbeAsync(opciones, ct));
+        })
+        .WithName("ProbeModel");
 
         /// <summary>Los modelos que ofrece un servidor compatible con OpenAI —Ollama y LM Studio
         /// en la máquina, Groq o cualquier otro en la nube—. Se pregunta en vez de hacer escribir

@@ -723,4 +723,6 @@ export const pt: Dictionary = {
   'item.descriptionPlaceholder': 'O que precisa ser feito, e o necessário para entender sem perguntar. Markdown funciona: listas, links, código.',
   'people.slackId': 'Identificador do Slack',
   'people.slackIdAuto': 'Resolvido automaticamente pelo e-mail',
+  'settings.probeModel': 'Testar o modelo',
+  'settings.modelLastError': 'O provedor rejeitou o último pedido:',
 }

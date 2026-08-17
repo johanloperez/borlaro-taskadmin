@@ -726,4 +726,6 @@ export const es: Dictionary = {
   'item.descriptionPlaceholder': 'Qué hay que hacer, y lo que haga falta para entenderlo sin preguntar. Funciona Markdown: listas, enlaces, código.',
   'people.slackId': 'Identificador de Slack',
   'people.slackIdAuto': 'Se resuelve solo a partir de su email',
+  'settings.probeModel': 'Probar el modelo',
+  'settings.modelLastError': 'El proveedor rechazó el último pedido:',
 }

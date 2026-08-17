@@ -41,6 +41,7 @@ public class CheckInConversation(
     AgentModelFactory models,
     OrganizationSettings organizationSettings,
     AgentToolExecutor executor,
+    AgentModelHealth health,
     FeedService feed,
     ILogger<CheckInConversation> logger)
 {
@@ -315,11 +316,24 @@ public class CheckInConversation(
                 // Que el modelo no responda no puede perder lo que la persona ya escribió: se
                 // guarda lo que hay y se le dice la verdad.
                 logger.LogError(ex, "Falló el modelo en el check-in {CheckIn}", checkIn.Id);
+
+                // Y se registra para que aparezca en Configuración. Sin esto, el motivo real
+                // —una clave vencida, un modelo que no acepta herramientas— queda en el log del
+                // servidor mientras quien puede arreglarlo mira una pantalla que solo sabe decir
+                // qué está configurado.
+                health.Registrar(checkIn.OrganizationId, ex.Message);
+
+                // Al que está conversando no se le habla de configuración: no es su problema y
+                // no puede hacer nada. Se le dice que no fue culpa suya y que no perdió nada.
                 messages.Add(AgentMessage.FromAssistant(
-                    "Se me cortó la conexión con el modelo. Lo que me contaste quedó guardado; " +
-                    "probá de nuevo en un momento.", null));
+                    "No pude seguir por un problema del sistema, no por algo que hayas hecho. " +
+                    "Lo que me contaste quedó guardado y ya avisé a quien lo administra.", null));
                 break;
             }
+
+            // Salió bien: si había un fallo anterior, ya no aplica. Mostrar el error de ayer sobre
+            // una configuración arreglada manda a buscar un problema que no existe.
+            health.Limpiar(checkIn.OrganizationId);
 
             checkIn.TurnCount++;
             checkIn.InputTokens += result.Usage.InputTokens;

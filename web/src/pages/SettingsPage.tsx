@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Check, Loader2, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, RefreshCw, ShieldCheck } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { api, ApiError } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -51,6 +51,26 @@ interface ModelStatus {
   model: string
   usingFallback: boolean
   explanation: string
+  /** Lo último que el proveedor rechazó. Vive en memoria del servidor y se limpia cuando una
+   *  conversación sale bien. */
+  lastError: string | null
+  lastErrorAt: string | null
+}
+
+interface ModelProbe {
+  ok: boolean
+  supportsTools: boolean
+  message: string
+}
+
+/** Prueba el modelo escrito en pantalla con un pedido real que declara una herramienta. Es lo que
+ *  distingue «responde» de «sirve para el agente»: un modelo sin soporte de herramientas guarda
+ *  bien y falla recién en el primer check-in del día. */
+function useProbeModel() {
+  return useMutation({
+    mutationFn: (body: { provider?: string; baseUrl?: string; model?: string; apiKey?: string }) =>
+      api<ModelProbe>('/api/settings/model/probe', { method: 'POST', body }),
+  })
 }
 
 /** La misma pantalla sirve a dos autoridades: el admin de una organización edita lo suyo, y el
@@ -131,6 +151,7 @@ export function SettingsPage() {
   const settings = useSettings(base)
   const status = useModelStatus(!isPlatform)
   const local = useLocalModels()
+  const probe = useProbeModel()
   const oidc = useOidcProbe(base)
   const save = useSaveSettings(base)
 
@@ -200,6 +221,14 @@ export function SettingsPage() {
                   </span>{' '}
                   {status.data.explanation}
                 </p>
+
+                {/* El rechazo del proveedor va acá y no solo en el log: quien puede arreglarlo
+                    está mirando esta pantalla, y en el chat la persona solo vio que algo falló. */}
+                {status.data.lastError && (
+                  <p className="mt-2 rounded-lg border border-stage-blocked/40 bg-canvas p-2 text-xs text-stage-blocked">
+                    <strong>{t('settings.modelLastError')}</strong> {status.data.lastError}
+                  </p>
+                )}
               </div>
             )}
 
@@ -227,8 +256,42 @@ export function SettingsPage() {
                     )}
                     {t('settings.detectModels')}
                   </button>
+                  <button
+                    onClick={() =>
+                      probe.mutate({
+                        provider: draft['AgentModel:Provider'] ?? undefined,
+                        baseUrl: draft['AgentModel:BaseUrl'] ?? undefined,
+                        model: draft['AgentModel:Model'] ?? undefined,
+                        apiKey: draft['AgentModel:ApiKey'] ?? undefined,
+                      })
+                    }
+                    disabled={probe.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5
+                               text-xs text-ink-muted hover:bg-canvas hover:text-ink disabled:opacity-50"
+                  >
+                    {probe.isPending ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="size-3.5" />
+                    )}
+                    {t('settings.probeModel')}
+                  </button>
+
                   <span className="text-[11px] text-ink-subtle">{t('settings.detectHelp')}</span>
                 </div>
+
+                {probe.data && (
+                  <p
+                    className={cn(
+                      'mt-2 text-xs',
+                      probe.data.ok && probe.data.supportsTools
+                        ? 'text-ink-muted'
+                        : 'text-stage-blocked',
+                    )}
+                  >
+                    {probe.data.message}
+                  </p>
+                )}
 
                 {local.data?.error && (
                   <p className="mt-2 text-xs text-stage-blocked">{local.data.error}</p>

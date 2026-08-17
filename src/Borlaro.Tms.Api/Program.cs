@@ -165,6 +165,9 @@ builder.Services.AddScoped<SettingsService>();
 // El resolvedor de dos capas: lo que decidió la organización, y si no, lo de la plataforma. Lo
 // usan el agente y el canal de email, que son los dos ajustes que una empresa querría cambiar.
 builder.Services.AddScoped<OrganizationSettings>();
+// Singleton: el ultimo fallo del modelo tiene que sobrevivir al request que lo produjo, porque
+// quien lo va a leer entra a Configuracion despues y desde otra sesion.
+builder.Services.AddSingleton<AgentModelHealth>();
 builder.Services.AddScoped<AgentToolExecutor>();
 builder.Services.AddScoped<AgentApprovalService>();
 builder.Services.AddScoped<CheckInConversation>();
