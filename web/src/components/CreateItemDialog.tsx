@@ -36,6 +36,7 @@ export function CreateItemDialog({
   labels,
   onDone,
   onCreated,
+  fullPage,
 }: {
   projectKey: string
   types: string[]
@@ -43,6 +44,10 @@ export function CreateItemDialog({
   labels: DifficultyLabels
   onDone: () => void
   onCreated: (id: string) => void
+  /** Ocupa el lugar del tablero en vez de flotar encima. Una descripción con capturas y listas
+   *  necesita ancho de verdad, y a 1280 px un modal centrado deja la mitad de la pantalla en
+   *  fondo oscurecido. */
+  fullPage?: boolean
 }) {
   const t = useT()
   const create = useCreateItem(projectKey)
@@ -112,10 +117,19 @@ export function CreateItemDialog({
   const trabajando = create.isPending || subiendo
 
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/30 p-4 sm:p-8">
+    <div
+      className={cn(
+        fullPage
+          ? 'flex h-full min-h-0 flex-col overflow-y-auto bg-canvas'
+          : 'fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/30 p-4 sm:p-8',
+      )}
+    >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-4xl rounded-card border border-line bg-surface shadow-lg"
+        className={cn(
+          'w-full border-line bg-surface',
+          fullPage ? 'flex-1' : 'max-w-6xl rounded-card border shadow-lg',
+        )}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <h2 className="text-sm font-semibold">{t('board.createTitle')}</h2>
@@ -130,7 +144,12 @@ export function CreateItemDialog({
 
         {/* Dos columnas: el enunciado a la izquierda con todo el espacio, los datos a la derecha.
             Apiladas verticalmente, la descripción quedaría lejos de lo que la califica. */}
-        <div className="grid gap-5 p-5 lg:grid-cols-[1fr_16rem]">
+        <div
+          className={cn(
+            'grid gap-5 p-5',
+            fullPage ? 'lg:grid-cols-[1fr_20rem]' : 'lg:grid-cols-[1fr_16rem]',
+          )}
+        >
           <div className="space-y-3">
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-ink-muted">{t('item.title')}</label>
@@ -160,7 +179,12 @@ export function CreateItemDialog({
               </div>
 
               {previewing ? (
-                <div className="min-h-64 rounded-lg border border-line bg-canvas px-2.5 py-2 text-sm">
+                <div
+                  className={cn(
+                    'rounded-lg border border-line bg-canvas px-2.5 py-2 text-sm',
+                    fullPage ? 'min-h-[32rem]' : 'min-h-64',
+                  )}
+                >
                   {description.trim() ? (
                     <Markdown>{description}</Markdown>
                   ) : (
@@ -171,7 +195,7 @@ export function CreateItemDialog({
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={16}
+                  rows={fullPage ? 24 : 16}
                   placeholder={t('item.descriptionPlaceholder')}
                   className="w-full resize-y rounded-lg border border-line bg-canvas px-2.5 py-2
                              font-mono text-sm leading-relaxed focus:border-accent focus:outline-none"

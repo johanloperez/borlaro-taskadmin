@@ -68,6 +68,10 @@ export function BoardPage() {
   const [blockerPrompt, setBlockerPrompt] = useState<{ item: WorkItem; stage: Stage } | null>(null)
   const [fullCreate, setFullCreate] = useState(false)
 
+  // Ver una tarea a pantalla completa. Se recuerda entre tareas: quien prefiere leer ancho lo
+  // prefiere para todas, y volver al panel angosto en cada clic sería pelearle a la preferencia.
+  const [fullDetail, setFullDetail] = useState(false)
+
   const sensors = useSensors(
     // 6px de holgura: sin esto, un click en la tarjeta se interpreta como arrastre y nunca
     // se llega a abrir el detalle.
@@ -214,6 +218,38 @@ export function BoardPage() {
         </aside>
 
         <div className="flex-1 min-w-0 flex flex-col">
+          {/* El alta a pantalla completa reemplaza al tablero en vez de flotar encima: una
+              descripción con capturas necesita el ancho entero, y al cerrar vuelve el Kanban
+              intacto porque nunca se desmontó nada más que esto. */}
+          {fullCreate ? (
+            <CreateItemDialog
+              fullPage
+              projectKey={p.key}
+              types={p.workItemTypes}
+              fields={p.customFields}
+              labels={p.difficultyLabels}
+              onDone={() => setFullCreate(false)}
+              onCreated={(id) => {
+                setFullCreate(false)
+                setSelectedId(id)
+              }}
+            />
+          ) : selected && fullDetail ? (
+            <ItemDetailPanel
+              fullPage
+              item={selected}
+              project={p}
+              onToggleFullPage={() => setFullDetail(false)}
+              onClose={() => {
+                setSelectedId(null)
+                if (searchParams.has('item')) {
+                  searchParams.delete('item')
+                  setSearchParams(searchParams, { replace: true })
+                }
+              }}
+            />
+          ) : (
+          <>
           <div className="flex items-center gap-3 px-5 py-3 border-b border-line lg:hidden">
             <span className="font-mono text-xs text-ink-subtle">{p.key}</span>
             <h1 className="text-sm font-medium">{p.name}</h1>
@@ -261,12 +297,15 @@ export function BoardPage() {
               {dragging && <Card item={dragging} dragging />}
             </DragOverlay>
           </DndContext>
+          </>
+          )}
         </div>
 
-        {selected && (
+        {selected && !fullDetail && !fullCreate && (
           <ItemDetailPanel
             item={selected}
             project={p}
+            onToggleFullPage={() => setFullDetail(true)}
             onClose={() => {
               setSelectedId(null)
               // El parámetro se limpia al cerrar: si quedara, recargar la página volvería a
@@ -279,20 +318,6 @@ export function BoardPage() {
           />
         )}
       </div>
-
-      {fullCreate && (
-        <CreateItemDialog
-          projectKey={p.key}
-          types={p.workItemTypes}
-          fields={p.customFields}
-          labels={p.difficultyLabels}
-          onDone={() => setFullCreate(false)}
-          onCreated={(id) => {
-            setFullCreate(false)
-            setSelectedId(id)
-          }}
-        />
-      )}
 
       {blockerPrompt && (
         <BlockerDialog

@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { MarkdownImage } from '@/components/MarkdownImage'
 
 /** Muestra Markdown escrito por una persona del equipo.
  *
@@ -57,6 +58,8 @@ export function Markdown({ children }: { children: string }) {
           ),
           th: (props) => <th className="border border-line px-2 py-1 font-medium" {...props} />,
           td: (props) => <td className="border border-line px-2 py-1" {...props} />,
+          // Las capturas adjuntas se sirven con sesión, así que necesitan su propio componente.
+          img: (props) => <MarkdownImage src={props.src} alt={props.alt} />,
           hr: () => <hr className="border-line" />,
         }}
       >

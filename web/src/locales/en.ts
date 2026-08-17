@@ -737,4 +737,6 @@ export const en = {
   'board.createTitle': 'New task',
   'board.uploading': 'Uploading files…',
   'board.createdButAttachFailed': 'The task was created, but this file failed:',
+  'item.expandView': 'Open full width',
+  'item.collapseView': 'Back to the side panel',
 }

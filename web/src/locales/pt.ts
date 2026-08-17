@@ -734,4 +734,6 @@ export const pt: Dictionary = {
   'board.createTitle': 'Nova tarefa',
   'board.uploading': 'Enviando arquivos…',
   'board.createdButAttachFailed': 'A tarefa foi criada, mas este arquivo falhou:',
+  'item.expandView': 'Abrir em tela cheia',
+  'item.collapseView': 'Voltar ao painel lateral',
 }

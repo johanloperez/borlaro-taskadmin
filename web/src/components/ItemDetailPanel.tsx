@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bot, X, Loader2, Trash2 } from 'lucide-react'
+import { Bot, Maximize2, Minimize2, X, Loader2, Trash2 } from 'lucide-react'
 import { CustomFieldInput } from '@/components/CustomFieldInput'
 import { DeliverablesSection } from '@/components/DeliverablesSection'
 import { Attachments } from '@/components/Attachments'
@@ -32,10 +32,17 @@ export function ItemDetailPanel({
   item,
   project,
   onClose,
+  fullPage,
+  onToggleFullPage,
 }: {
   item: WorkItem
   project: ProjectDetail
   onClose: () => void
+  /** Ocupa el lugar del tablero en vez del panel lateral de 26rem. Una descripción con capturas y
+   *  listas no entra en una columna angosta: la imagen se achica hasta no leerse y cada línea se
+   *  parte en tres. */
+  fullPage?: boolean
+  onToggleFullPage?: () => void
 }) {
   const t = useT()
   const user = useAuth((s) => s.user)
@@ -121,7 +128,12 @@ export function ItemDetailPanel({
     JSON.stringify(fields) !== JSON.stringify(item.customFields ?? {})
 
   return (
-    <aside className="w-[26rem] shrink-0 border-l border-line bg-surface flex flex-col h-full">
+    <aside
+      className={cn(
+        'flex h-full flex-col bg-surface',
+        fullPage ? 'min-w-0 flex-1' : 'w-[26rem] shrink-0 border-l border-line',
+      )}
+    >
       <header className="flex items-center justify-between border-b border-line px-4 h-12">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-mono text-xs text-ink-subtle">{item.readableId}</span>
@@ -130,9 +142,21 @@ export function ItemDetailPanel({
             {item.stageName}
           </span>
         </div>
-        <button onClick={onClose} className="rounded-md p-1 text-ink-muted hover:bg-canvas hover:text-ink">
-          <X className="size-4" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          {onToggleFullPage && (
+            <button
+              onClick={onToggleFullPage}
+              title={fullPage ? t('item.collapseView') : t('item.expandView')}
+              className="rounded-md p-1 text-ink-muted hover:bg-canvas hover:text-ink"
+            >
+              {fullPage ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
+          )}
+
+          <button onClick={onClose} className="rounded-md p-1 text-ink-muted hover:bg-canvas hover:text-ink">
+            <X className="size-4" />
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">

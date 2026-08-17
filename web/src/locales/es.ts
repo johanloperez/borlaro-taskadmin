@@ -737,4 +737,6 @@ export const es: Dictionary = {
   'board.createTitle': 'Tarea nueva',
   'board.uploading': 'Subiendo archivos…',
   'board.createdButAttachFailed': 'La tarea se creó, pero este archivo falló:',
+  'item.expandView': 'Abrir a pantalla completa',
+  'item.collapseView': 'Volver al panel lateral',
 }
