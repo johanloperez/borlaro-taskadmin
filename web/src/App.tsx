@@ -10,6 +10,7 @@ import { ApprovalsPage } from '@/pages/ApprovalsPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { MessagesPage } from '@/pages/MessagesPage'
+import { FeedPage } from '@/pages/FeedPage'
 import { TemplatesPage } from '@/pages/TemplatesPage'
 import { ActivityPage } from '@/pages/ActivityPage'
 import { PlatformPage } from '@/pages/PlatformPage'
@@ -94,6 +95,14 @@ export default function App() {
           element={
             <RequireAuth>
               <MessagesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/novedades"
+          element={
+            <RequireAuth>
+              <FeedPage />
             </RequireAuth>
           }
         />

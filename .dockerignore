@@ -17,8 +17,8 @@ web/dist/
 .idea/
 
 # Datos generados en desarrollo: los entregables y los emails de prueba viven en volúmenes.
-src/TaskAdmin.Api/uploads/
-src/TaskAdmin.Api/outbox/
+src/Borlaro.Tms.Api/uploads/
+src/Borlaro.Tms.Api/outbox/
 
 # La app de escritorio no forma parte de ninguna imagen: se distribuye como instalador.
-src/TaskAdmin.Desktop/
+src/Borlaro.Tms.Desktop/

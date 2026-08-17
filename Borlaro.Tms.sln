@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F51364E8-3A6F-483C-8A2E-BE412FE19631}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Borlaro.Tms.Domain", "src\Borlaro.Tms.Domain\Borlaro.Tms.Domain.csproj", "{7A11C11A-DF93-4BE4-95F9-E7B49EAB223F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Borlaro.Tms.Infrastructure", "src\Borlaro.Tms.Infrastructure\Borlaro.Tms.Infrastructure.csproj", "{E5A3294F-3F42-4DC6-A751-C732C161B963}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Borlaro.Tms.Agent", "src\Borlaro.Tms.Agent\Borlaro.Tms.Agent.csproj", "{A3C83F7D-7210-4460-BCC7-F9B2E4BE72EE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Borlaro.Tms.Api", "src\Borlaro.Tms.Api\Borlaro.Tms.Api.csproj", "{8803566E-50D5-4104-996D-4539B9F6643C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Borlaro.Tms.Desktop", "src\Borlaro.Tms.Desktop\Borlaro.Tms.Desktop.csproj", "{FD7066FF-31F8-4FB4-9424-338CCF37CAEE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A11C11A-DF93-4BE4-95F9-E7B49EAB223F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A11C11A-DF93-4BE4-95F9-E7B49EAB223F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A11C11A-DF93-4BE4-95F9-E7B49EAB223F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A11C11A-DF93-4BE4-95F9-E7B49EAB223F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5A3294F-3F42-4DC6-A751-C732C161B963}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5A3294F-3F42-4DC6-A751-C732C161B963}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5A3294F-3F42-4DC6-A751-C732C161B963}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5A3294F-3F42-4DC6-A751-C732C161B963}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3C83F7D-7210-4460-BCC7-F9B2E4BE72EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3C83F7D-7210-4460-BCC7-F9B2E4BE72EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3C83F7D-7210-4460-BCC7-F9B2E4BE72EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3C83F7D-7210-4460-BCC7-F9B2E4BE72EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8803566E-50D5-4104-996D-4539B9F6643C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8803566E-50D5-4104-996D-4539B9F6643C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8803566E-50D5-4104-996D-4539B9F6643C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8803566E-50D5-4104-996D-4539B9F6643C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD7066FF-31F8-4FB4-9424-338CCF37CAEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD7066FF-31F8-4FB4-9424-338CCF37CAEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD7066FF-31F8-4FB4-9424-338CCF37CAEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD7066FF-31F8-4FB4-9424-338CCF37CAEE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7A11C11A-DF93-4BE4-95F9-E7B49EAB223F} = {F51364E8-3A6F-483C-8A2E-BE412FE19631}
+		{E5A3294F-3F42-4DC6-A751-C732C161B963} = {F51364E8-3A6F-483C-8A2E-BE412FE19631}
+		{A3C83F7D-7210-4460-BCC7-F9B2E4BE72EE} = {F51364E8-3A6F-483C-8A2E-BE412FE19631}
+		{8803566E-50D5-4104-996D-4539B9F6643C} = {F51364E8-3A6F-483C-8A2E-BE412FE19631}
+		{FD7066FF-31F8-4FB4-9424-338CCF37CAEE} = {F51364E8-3A6F-483C-8A2E-BE412FE19631}
+	EndGlobalSection
+EndGlobal

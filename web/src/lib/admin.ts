@@ -13,6 +13,10 @@ export interface AdminUser {
   checkInTime: string
   workDaysMask: number
   checkInsEnabled: boolean
+  /** Los tres permisos por persona, que se comprueban además del permiso sobre el proyecto. */
+  canAssignTasks: boolean
+  canSetDueDate: boolean
+  canCreateTasks: boolean
   openItems: number
   createdAt: string
   /** False en las cuentas que entran solo por el proveedor externo. */

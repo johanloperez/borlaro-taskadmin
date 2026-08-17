@@ -98,7 +98,16 @@ export interface ProjectPermissions {
 export interface ProjectDetail extends Omit<ProjectSummary, 'openItems'> {
   stages: Stage[]
   customFields: CustomFieldDef[]
+  difficultyLabels: DifficultyLabels
   permissions: ProjectPermissions
+}
+
+/** Cómo llama este proyecto a los tres niveles. Nulo = el nombre por defecto, traducido al idioma
+ *  de quien mira. Una etiqueta propia no se traduce: alguien la escribió en un idioma. */
+export interface DifficultyLabels {
+  low: string | null
+  medium: string | null
+  high: string | null
 }
 
 export interface WorkItem {
@@ -120,7 +129,11 @@ export interface WorkItem {
   previousAssigneeName?: string | null
   /** Si fue asignado por el sistema (menos carga) o manualmente. */
   assignedBySystem: boolean
+  /** Horas estimadas originales. No se pisan: lo que hace falta de más son ampliaciones. */
   estimate: number | null
+  /** Suma de las ampliaciones no anuladas. El total comprometido es estimate + addedHours. */
+  addedHours: number
+  difficulty: WorkItemDifficulty
   progressPct: number
   dueDate: string | null
   sortOrder: number
@@ -237,4 +250,48 @@ export const priorityLabel: Record<WorkItemPriority, string> = {
   Normal: 'Normal',
   High: 'Alta',
   Urgent: 'Urgente',
+}
+
+export type WorkItemDifficulty = 'Baja' | 'Media' | 'Alta'
+
+/** Una ampliación de tiempo. Las anuladas siguen viniendo: que algo se registró y resultó estar
+ *  mal es parte de la historia. */
+export interface TimeExtension {
+  id: string
+  hours: number
+  reason: string
+  actorType: ActorType
+  actorName: string | null
+  checkInId: string | null
+  createdAt: string
+  voidedAt: string | null
+  voidReason: string | null
+  voidedByName: string | null
+}
+
+export interface FeedItem {
+  id: string
+  kind: string
+  title: string
+  body: string
+  linkUrl: string | null
+  createdAt: string
+  readAt: string | null
+}
+
+/** El nombre a mostrar de un nivel: la etiqueta del proyecto si la definió, y si no el nombre por
+ *  defecto traducido.
+ *
+ *  Vive acá y no en cada pantalla porque la regla —etiqueta propia gana, default traduce— tiene
+ *  que ser la misma en el tablero, en el detalle y en el formulario. Repetida en tres lugares se
+ *  desalinea en el primer cambio. */
+export function difficultyLabel(
+  level: WorkItemDifficulty,
+  labels: DifficultyLabels | undefined,
+  fallback: (level: WorkItemDifficulty) => string,
+): string {
+  const custom =
+    level === 'Baja' ? labels?.low : level === 'Media' ? labels?.medium : labels?.high
+
+  return custom?.trim() || fallback(level)
 }

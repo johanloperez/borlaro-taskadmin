@@ -1,4 +1,4 @@
-# Deja esta maquina lista para servir TaskAdmin de forma permanente: respaldo diario, sin
+# Deja esta maquina lista para servir Borlaro TMS de forma permanente: respaldo diario, sin
 # suspension, y Docker arrancando solo.
 #
 # Pensado para el caso "el servidor es mi PC y sale por un tunel de Cloudflare". No toca el
@@ -11,6 +11,11 @@
 #
 # Todo lo que hace es reversible y se explica al final.
 
+# Los dos valores que siguen conservan el nombre viejo a proposito, y no es un olvido del
+# renombrado a Borlaro TMS: los dos nombran cosas que ya existen en la maquina que sirve la app.
+# Cambiar $Destino arrancaria una serie de respaldos nueva y dejaria la vieja sin rotar; cambiar
+# $Tarea crearia una segunda tarea programada al lado de la que ya corre, y quedarian las dos.
+# Se renombran el dia que se migren a mano, pasandolos por parametro.
 [CmdletBinding()]
 param(
     [string]$Hora = "03:00",
@@ -77,7 +82,7 @@ Register-ScheduledTask `
     -Settings $opciones `
     -User $usuario `
     -RunLevel Highest `
-    -Description "Volcado de Postgres y de los archivos subidos de TaskAdmin, con retencion de $Dias dias." | Out-Null
+    -Description "Volcado de Postgres y de los archivos subidos de Borlaro TMS, con retencion de $Dias dias." | Out-Null
 
 Write-Host "  Tarea '$Tarea' registrada: todos los dias a las $Hora" -ForegroundColor Green
 Write-Host "  Destino: $Destino (retiene $Dias dias)"

@@ -131,7 +131,7 @@ export function LoginPage() {
     <main className="min-h-screen grid place-items-center px-6">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">TaskAdmin</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Borlaro TMS</h1>
           <p className="mt-1 text-sm text-ink-muted">
             {tenancy.data?.registrationOpen ? t('login.subtitleWithSignUp') : t('login.subtitle')}
           </p>

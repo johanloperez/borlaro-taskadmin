@@ -1,0 +1,178 @@
+<Window x:Class="Borlaro.Tms.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Borlaro.Tms.Desktop"
+        Title="Borlaro TMS" Height="720" Width="480"
+        WindowStartupLocation="CenterScreen"
+        Background="#14130F">
+
+    <Window.Resources>
+        <!-- Una burbuja por turno. El agente a la izquierda y la persona a la derecha: es la
+             convención de cualquier chat, y ahorra tener que etiquetar quién habla. -->
+        <DataTemplate x:Key="TurnoAgente" DataType="{x:Type local:ChatBubble}">
+            <Border Background="#1F1D19" CornerRadius="12,12,12,4"
+                    Padding="12,9" Margin="0,0,48,10" HorizontalAlignment="Left">
+                <TextBlock Text="{Binding Text}" Foreground="#F5F2ED"
+                           TextWrapping="Wrap" LineHeight="19" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="TurnoPersona" DataType="{x:Type local:ChatBubble}">
+            <Border Background="#134E4A" CornerRadius="12,12,4,12"
+                    Padding="12,9" Margin="48,0,0,10" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding Text}" Foreground="#ECFDF5"
+                           TextWrapping="Wrap" LineHeight="19" />
+            </Border>
+        </DataTemplate>
+
+        <!-- Lo que el agente dejó registrado en el tablero. Se muestra aparte de la charla porque
+             no es algo que alguien haya dicho: es lo que efectivamente cambió. -->
+        <DataTemplate x:Key="TurnoAccion" DataType="{x:Type local:ChatBubble}">
+            <Border Background="#1A1F1C" BorderBrush="#2A3A33" BorderThickness="1"
+                    CornerRadius="6" Padding="10,6" Margin="0,0,0,10">
+                <TextBlock Text="{Binding Text}" Foreground="#6EE7B7"
+                           FontSize="11" TextWrapping="Wrap" />
+            </Border>
+        </DataTemplate>
+
+        <local:BubbleTemplateSelector x:Key="SelectorDeTurno"
+                                      Agente="{StaticResource TurnoAgente}"
+                                      Persona="{StaticResource TurnoPersona}"
+                                      Accion="{StaticResource TurnoAccion}" />
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Barra fija: el botón al sistema web existe siempre, sin importar en qué estado esté
+             el chat. Todo lo que no sea el check-in vive allá. -->
+        <Border Grid.Row="0" Background="#1C1A17" BorderBrush="#302C26" BorderThickness="0,0,0,1">
+            <Grid Margin="12,8">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Borlaro TMS" Foreground="#F5F2ED" FontSize="13" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                    <TextBlock x:Name="HeaderHint" Text="" Foreground="#7C756A" FontSize="11"
+                               Margin="10,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button x:Name="OpenWebButton"
+                        Content="Ir al sistema web"
+                        HorizontalAlignment="Right"
+                        Padding="10,4"
+                        Foreground="#0B1211"
+                        Background="#2DD4BF"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        Click="OpenWebButton_Click" />
+            </Grid>
+        </Border>
+
+        <Grid x:Name="Root" Grid.Row="1">
+
+            <!-- ── El chat ──────────────────────────────────────────────────────────────── -->
+            <Grid x:Name="ChatPanel" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <ScrollViewer x:Name="ChatScroll" Grid.Row="0"
+                              VerticalScrollBarVisibility="Auto"
+                              Padding="16,14">
+                    <ItemsControl x:Name="TurnsList"
+                                  ItemTemplateSelector="{StaticResource SelectorDeTurno}" />
+                </ScrollViewer>
+
+                <Border Grid.Row="1" Background="#1C1A17" BorderBrush="#302C26" BorderThickness="0,1,0,0"
+                        Padding="12,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- AcceptsReturn con Enter para enviar: en un chat, Enter manda y
+                                 Shift+Enter hace salto de línea. Al revés obliga a soltar el
+                                 teclado para contestar dos palabras. -->
+                            <TextBox x:Name="ReplyBox" Grid.Column="0"
+                                     Background="#232019" Foreground="#F5F2ED" BorderBrush="#423D35"
+                                     Padding="10,8" MinHeight="38" MaxHeight="120"
+                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     PreviewKeyDown="ReplyBox_PreviewKeyDown" />
+
+                            <Button x:Name="SendButton" Grid.Column="1"
+                                    Content="Enviar" Margin="8,0,0,0" Padding="14,8"
+                                    Background="#2DD4BF" Foreground="#0B1211" BorderThickness="0"
+                                    Cursor="Hand" VerticalAlignment="Bottom"
+                                    Click="SendButton_Click" />
+                        </Grid>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button x:Name="NoChangesButton"
+                                    Content="Sin cambios hoy"
+                                    Padding="8,3" FontSize="11"
+                                    Background="Transparent" Foreground="#A49E94"
+                                    BorderBrush="#423D35" BorderThickness="1"
+                                    Cursor="Hand" Click="NoChangesButton_Click" />
+                            <TextBlock x:Name="ChatError" Foreground="#F87171" FontSize="11"
+                                       TextWrapping="Wrap" Margin="10,0,0,0"
+                                       VerticalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ── Entrada ──────────────────────────────────────────────────────────────── -->
+            <StackPanel x:Name="LoginPanel"
+                        VerticalAlignment="Center"
+                        Margin="36,0"
+                        Visibility="Collapsed">
+                <TextBlock Text="Entrar a Borlaro TMS"
+                           Foreground="#F5F2ED" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Con el mismo usuario y contraseña que usás en la web."
+                           Foreground="#A49E94" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,18" />
+
+                <TextBlock Text="Dirección del servidor" Foreground="#A49E94" FontSize="11" />
+                <TextBox x:Name="ServerBox" Margin="0,4,0,12" Padding="8,6"
+                         Background="#232019" Foreground="#F5F2ED" BorderBrush="#423D35" />
+
+                <TextBlock Text="Email" Foreground="#A49E94" FontSize="11" />
+                <TextBox x:Name="EmailBox" Margin="0,4,0,12" Padding="8,6"
+                         Background="#232019" Foreground="#F5F2ED" BorderBrush="#423D35" />
+
+                <TextBlock Text="Contraseña" Foreground="#A49E94" FontSize="11" />
+                <PasswordBox x:Name="PasswordBox" Margin="0,4,0,18" Padding="8,6"
+                             Background="#232019" Foreground="#F5F2ED" BorderBrush="#423D35"
+                             KeyDown="PasswordBox_KeyDown" />
+
+                <Button x:Name="LoginButton" Content="Entrar" Padding="12,8"
+                        Background="#2DD4BF" Foreground="#0B1211" BorderThickness="0"
+                        Cursor="Hand" Click="LoginButton_Click" />
+
+                <TextBlock x:Name="LoginError" Foreground="#F87171" FontSize="12"
+                           TextWrapping="Wrap" Margin="0,12,0,0" Visibility="Collapsed" />
+            </StackPanel>
+
+            <!-- ── Estado (cargando, sin check-in, o un fallo) ──────────────────────────── -->
+            <TextBlock x:Name="StatusText"
+                       Text="Conectando…"
+                       Foreground="#A49E94"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="24"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Visibility="Collapsed" />
+        </Grid>
+    </Grid>
+</Window>

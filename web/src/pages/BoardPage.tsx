@@ -22,18 +22,22 @@ import {
   useCreateItem,
   useEnableIntake,
   useProject,
-  useSetStageOwner,
+  useStageResponsibles,
+  useStageResponsibleMutation,
   useTeam,
   useTransitionItem,
 } from '@/lib/queries'
 import { ApiError } from '@/lib/api'
 import { useBoardRealtime } from '@/lib/realtime'
 import {
+  difficultyLabel,
   priorityLabel,
   stageDot,
   type CustomFieldDef,
+  type DifficultyLabels,
   type Stage,
   type WorkItem,
+  type WorkItemDifficulty,
 } from '@/lib/types'
 import { cn } from '@/lib/cn'
 import { useT } from '@/lib/i18n'
@@ -242,6 +246,7 @@ export function BoardPage() {
               projectKey={p.key}
               types={p.workItemTypes}
               fields={p.customFields}
+              labels={p.difficultyLabels}
               onDone={() => setAdding(false)}
             />
           )}
@@ -366,15 +371,28 @@ function StageOwner({
   // `/api/auth/users` ya devuelve solo la gente activa de la organización: el servidor no ofrece
   // como candidato a alguien dado de baja, así que no hace falta filtrarlo acá.
   const people = useTeam()
-  const setOwner = useSetStageOwner(projectKey)
 
-  const name = stage.defaultAssigneeName
+  // La lista solo se pide cuando se abre el desplegable: son tantas consultas como columnas tenga
+  // el tablero, y ninguna hace falta hasta que alguien quiere repartir.
+  const responsibles = useStageResponsibles(projectKey, stage.id, open)
+  const { add, remove } = useStageResponsibleMutation(projectKey, stage.id)
+
+  const enLista = responsibles.data ?? []
+
+  // Quién atiende esta etapa, para el resumen de la columna. La lista manda; el titular único
+  // aparece solo si la etapa se configuró antes de que la lista existiera (§12).
+  const resumen =
+    enLista.length > 0
+      ? enLista.length === 1
+        ? enLista[0].name
+        : t('board.stageOwnerCount', { count: String(enLista.length) })
+      : stage.defaultAssigneeName
 
   if (!canAssign) {
-    if (!name) return null
+    if (!resumen) return null
     return (
-      <p className="mt-1.5 truncate text-[11px] text-ink-subtle" title={name}>
-        {t('board.stageOwner', { name })}
+      <p className="mt-1.5 truncate text-[11px] text-ink-subtle" title={resumen}>
+        {t('board.stageOwner', { name: resumen })}
       </p>
     )
   }
@@ -386,55 +404,58 @@ function StageOwner({
         className={cn(
           'inline-flex max-w-full items-center gap-1 truncate rounded px-1 py-0.5 text-[11px]',
           'hover:bg-canvas',
-          name ? 'text-ink-subtle' : 'text-ink-subtle/70 italic',
+          resumen ? 'text-ink-subtle' : 'text-ink-subtle/70 italic',
         )}
       >
         <UserCog className="size-3 shrink-0" />
         <span className="truncate">
-          {name ? t('board.stageOwner', { name }) : t('board.stageOwnerNone')}
+          {resumen ? t('board.stageOwner', { name: resumen }) : t('board.stageOwnerNone')}
         </span>
       </button>
 
       {open && (
         <div
-          className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-line
+          className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-line
                      bg-surface p-1 shadow-lg"
         >
           <p className="px-2 py-1.5 text-[11px] leading-snug text-ink-muted">
             {t('board.stageOwnerHelp')}
           </p>
 
-          <button
-            onClick={() => {
-              setOwner.mutate({ stageId: stage.id, assigneeId: null })
-              setOpen(false)
-            }}
-            className={cn(
-              'w-full rounded px-2 py-1.5 text-left text-sm hover:bg-canvas',
-              !stage.defaultAssigneeId && 'font-medium text-ink',
-            )}
-          >
-            {t('board.stageOwnerClear')}
-          </button>
-
+          {/* Varias personas pueden atender la misma etapa: cuando llega una tarea se le da a la
+              que tenga menos trabajo abierto. Con una sola en la lista se comporta igual que el
+              titular único de antes, así que no hay dos formas de configurar lo mismo. */}
           <div className="max-h-56 overflow-y-auto">
-            {people.data
-              ?.map((person) => (
+            {people.data?.map((person) => {
+              const puesto = enLista.some((r) => r.userId === person.id)
+              return (
                 <button
                   key={person.id}
-                  onClick={() => {
-                    setOwner.mutate({ stageId: stage.id, assigneeId: person.id })
-                    setOpen(false)
-                  }}
+                  disabled={add.isPending || remove.isPending}
+                  onClick={() => (puesto ? remove.mutate(person.id) : add.mutate(person.id))}
                   className={cn(
-                    'w-full truncate rounded px-2 py-1.5 text-left text-sm hover:bg-canvas',
-                    person.id === stage.defaultAssigneeId && 'font-medium text-ink',
+                    'flex w-full items-center gap-2 truncate rounded px-2 py-1.5 text-left text-sm',
+                    'hover:bg-canvas disabled:opacity-50',
+                    puesto && 'font-medium text-ink',
                   )}
                 >
-                  {person.name}
+                  <span
+                    className={cn(
+                      'inline-block size-3 shrink-0 rounded-sm border',
+                      puesto ? 'border-accent bg-accent' : 'border-line',
+                    )}
+                  />
+                  <span className="truncate">{person.name}</span>
                 </button>
-              ))}
+              )
+            })}
           </div>
+
+          {enLista.length === 0 && stage.defaultAssigneeName && (
+            <p className="border-t border-line px-2 py-1.5 text-[11px] leading-snug text-ink-subtle">
+              {t('board.stageOwnerLegacy', { name: stage.defaultAssigneeName })}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -598,7 +619,16 @@ function Card({
 
       <div className="mt-2 flex items-center gap-2 text-[11px] text-ink-subtle">
         <span>{item.type}</span>
-        {item.dueDate && <span>· {item.dueDate}</span>}
+        {item.dueDate ? (
+          <span>· {item.dueDate}</span>
+        ) : (
+          /* Sin fecha y ya en curso es trabajo que nadie sabe cuándo llega. No se impide —bloquear
+             el movimiento frenaría a quien no puede poner fechas— pero se ve, y quien lidera
+             recibe además el aviso en Novedades. */
+          item.stageCategory === 'InProgress' && (
+            <span className="text-stage-blocked">· {t('board.noDate')}</span>
+          )
+        )}
         {item.progressPct > 0 && <span>· {item.progressPct}%</span>}
 
         {/* Quién la tiene, siempre visible en la tarjeta. Sin asignar es una señal en sí misma,
@@ -690,17 +720,22 @@ function NewItemForm({
   projectKey,
   types,
   fields,
+  labels,
   onDone,
 }: {
   projectKey: string
   types: string[]
   fields: CustomFieldDef[]
+  labels: DifficultyLabels
   onDone: () => void
 }) {
   const t = useT()
   const create = useCreateItem(projectKey)
   const [title, setTitle] = useState('')
   const [type, setType] = useState(types[0] ?? 'Tarea')
+  const [dueDate, setDueDate] = useState('')
+  const [estimate, setEstimate] = useState('')
+  const [difficulty, setDifficulty] = useState<'' | WorkItemDifficulty>('')
   const [values, setValues] = useState<Record<string, unknown>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -718,6 +753,11 @@ function NewItemForm({
       await create.mutateAsync({
         title,
         type,
+        dueDate: dueDate || null,
+        // Vacío es «no lo sé todavía», que no es lo mismo que cero: cero horas estimadas diría
+        // que la tarea no cuesta nada, y eso después aparece como una subestimación gigante.
+        estimate: estimate === '' ? null : Number(estimate),
+        difficulty: difficulty as WorkItemDifficulty,
         customFields: required.length > 0 ? values : undefined,
       })
       onDone()
@@ -763,6 +803,60 @@ function NewItemForm({
       <button type="button" onClick={onDone} className="rounded-md px-2 py-1.5 text-sm text-ink-muted">
         <X className="size-4" />
       </button>
+      </div>
+
+      {/* Fecha, horas y dificultad van acá y no escondidas en el detalle: son lo que decide el
+          comportamiento del agente, y un campo que hay que ir a buscar después no se completa.
+          Los tres son opcionales, así que anotar algo rápido sigue siendo escribir y Enter. */}
+      <div className="mt-2 flex flex-wrap items-end gap-2 border-t border-line pt-2">
+        <label className="text-xs text-ink-muted">
+          <span className="mb-1 block">{t('board.newDueDate')}</span>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm
+                       focus:border-accent focus:outline-none"
+          />
+        </label>
+
+        <label className="text-xs text-ink-muted">
+          <span className="mb-1 block">{t('board.newEstimate')}</span>
+          <input
+            type="number"
+            min="0"
+            step="0.5"
+            value={estimate}
+            onChange={(e) => setEstimate(e.target.value)}
+            placeholder="—"
+            className="w-24 rounded-md border border-line bg-canvas px-2 py-1.5 text-sm
+                       focus:border-accent focus:outline-none"
+          />
+        </label>
+
+        <label className="text-xs text-ink-muted">
+          <span className="mb-1 block">{t('board.newDifficulty')}</span>
+          {/* Arranca vacío y es obligatorio, no preseleccionado. Un valor puesto de fábrica se
+              acepta sin mirarlo, y entonces el nivel pasa a significar «lo que salió» en vez de
+              «lo que alguien juzgó» — y sobre eso el agente no puede modular nada. Prefiere
+              costar un clic a costar el dato. */}
+          <select
+            required
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as WorkItemDifficulty)}
+            className="rounded-md border border-line bg-canvas px-2 py-1.5 text-sm
+                       focus:border-accent focus:outline-none"
+          >
+            <option value="" disabled>
+              {t('board.newDifficultyPick')}
+            </option>
+            {(['Baja', 'Media', 'Alta'] as const).map((level) => (
+              <option key={level} value={level}>
+                {difficultyLabel(level, labels, (l) => t(`difficulty.${l}` as const))}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {required.length > 0 && (

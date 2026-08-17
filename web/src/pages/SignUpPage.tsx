@@ -242,7 +242,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
     <main className="min-h-screen grid place-items-center px-6 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <p className="text-sm text-ink-subtle">TaskAdmin</p>
+          <p className="text-sm text-ink-subtle">Borlaro TMS</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{title}</h1>
         </div>
         {children}

@@ -1,4 +1,4 @@
-# TaskAdmin — Gestión de trabajo con agente de IA de seguimiento
+# Borlaro TMS — Gestión de trabajo con agente de IA de seguimiento
 
 ## Contexto
 
@@ -241,7 +241,7 @@ RepoLink(id, task_id, kind[commit|pr|branch], external_id, url, state, created_a
 
 - **`NativeProvider` (MVP, default).** Las tareas viven en tu DB. El repo se referencia por link y se conecta por **webhooks de solo lectura**: cada `push` o evento de PR que mencione `DEV-142` crea un `RepoLink`. Sin sincronización de issues, sin rate limits, y funciona con GitHub, GitLab, Bitbucket o ningún repo (que es el caso de diseño y edición).
 - **`GitHubIssuesProvider` (fase 2).** Para equipos ya instalados en GitHub Issues: lectura/escritura vía GitHub App (tokens de instalación de corta vida, permisos finos, 15.000 req/h). El issue lo lee de GitHub; lo que GitHub no tiene —etapas custom, campos personalizados, estimaciones, progreso, check-ins— vive en tu DB indexado por `external_ref`. **Modelo híbrido: GitHub es dueño del issue, vos sos dueño del metadata de gestión.** Evita el sync bidireccional completo, que es la trampa cara (conflictos, deduplicación, colas, reintentos — típicamente el 40% del esfuerzo de un producto así).
-- **`GitHubImporter` (fase 2, migración amigable).** Asistente: elegís repo, previsualizás el mapeo (labels → etiquetas, milestone → ciclo, state → etapa), importás conservando `external_ref`, y opcionalmente se comenta cada issue de GitHub con el link a TaskAdmin.
+- **`GitHubImporter` (fase 2, migración amigable).** Asistente: elegís repo, previsualizás el mapeo (labels → etiquetas, milestone → ciclo, state → etapa), importás conservando `external_ref`, y opcionalmente se comenta cada issue de GitHub con el link a Borlaro TMS.
 
 ### El agente de escritorio
 
@@ -338,11 +338,16 @@ variables de entorno. Son dos, se tocan una vez al instalar, y están documentad
 
 ## 6. Plan de construcción
 
-> **Estado al 11/08/2026.** Fases 0 a 4 construidas y corriendo en Docker. El detalle verificado,
-> lo pendiente y el cómo levantarlo están en el `README.md`, que es el documento vivo; este plan
-> queda como la decisión de diseño original.
+> **Estado al 17/08/2026.** Fases 0 a 4 construidas y corriendo en Docker.
 >
-> **Decisiones que cambiaron respecto de lo escrito abajo**, y conviene leer antes de retomar:
+> **Este documento es la especificación de referencia**, y se mantiene al día con cada cambio de
+> comportamiento: de acá se reconstruye el sistema. El `README.md` cuenta cómo desplegarlo y qué
+> se probó; cuando los dos hablen de lo mismo, manda el plan. (Hasta el 15/08/2026 la relación era
+> la inversa —el plan quedaba como diseño original y el README era lo vivo— y por eso hay
+> secciones que envejecieron; §12 y §9 se corrigieron el 17/08.)
+>
+> **Decisiones que cambiaron respecto de lo escrito debajo de esta sección**, y conviene leer antes
+> de retomar. Las que abrieron sección propia están enlazadas:
 >
 > - **No hay lista de miembros de proyecto.** Participar es tener trabajo asignado; se deduce.
 >   Lo único que se designa es quién lidera, y solo pueden liderar Admin o Manager.
@@ -355,7 +360,8 @@ variables de entorno. Son dos, se tocan una vez al instalar, y están documentad
 >   modo el agente aparece únicamente si hay algo vencido, bloqueado o sin novedades hace N días.
 >   Es la versión que persigue el problema en vez de ritualizarlo.
 > - **Los permisos del responsable son por tarea**, decididos al asignarla: mueve por defecto, no
->   edita ni borra salvo que se lo habiliten.
+>   edita ni borra salvo que se lo habiliten. Ver §16.
+> - **Los proyectos se archivan, no se borran.** Ver §17.
 > - **La app de escritorio tiene login propio** y sesión que no se cierra (token de dispositivo);
 >   sigue siendo solo chat y notificaciones.
 > - **Todo corre en Docker**, incluido el build del frontend. La configuración es editable desde
@@ -365,7 +371,7 @@ variables de entorno. Son dos, se tocan una vez al instalar, y están documentad
 > conector Git (5), y probar la app de escritorio con interfaz gráfica.
 
 ### Fase 0 — Esqueleto (semana 1)
-Solución .NET (`TaskAdmin.Api`, `.Domain`, `.Infrastructure`, `.Agent`), proyecto Vite+React, Docker Compose (api + postgres + caddy), EF Core con migración inicial, auth JWT con roles, seed con las 5 plantillas de proyecto.
+Solución .NET (`Borlaro.Tms.Api`, `.Domain`, `.Infrastructure`, `.Agent`), proyecto Vite+React, Docker Compose (api + postgres + caddy), EF Core con migración inicial, auth JWT con roles, seed con las 5 plantillas de proyecto.
 
 ### Fase 1 — Tracker usable en cualquier disciplina (semanas 2–5)
 CRUD de proyectos desde plantilla, motor de workflow con transiciones válidas, **campos personalizados** (definición + formulario dinámico + filtros), CRUD de tareas, Kanban con drag & drop, lista filtrable, "mis tareas", comentarios, `TaskEvent` en cada cambio, notificaciones in-app por SignalR, dashboard del manager.
@@ -380,7 +386,7 @@ CRUD de proyectos desde plantilla, motor de workflow con transiciones válidas, 
 **Criterio de salida:** con la app abierta llega el toast y el servidor registra apertura; con la app cerrada, a los 45 min llega el email; sin respuesta a las 2 h, el manager lo ve en su feed.
 
 ### Fase 4 — El agente (semanas 9–11) ← el corazón del producto
-`AgentRunner` sobre el SDK de C# con `BetaToolRunner`, las 9 herramientas con schema estricto, `CheckInScheduler` respetando timezone y días laborables, contexto por plantilla, UI de chat en React, tabla `AgentAction` con cola de aprobaciones, digest diario, chat del manager.
+`AgentRunner` sobre el SDK de C# con `BetaToolRunner`, las diez herramientas con schema estricto, `CheckInScheduler` respetando timezone y días laborables, contexto por plantilla, UI de chat en React, tabla `AgentAction` con cola de aprobaciones, digest diario, chat del manager.
 **Criterio de salida:** a las 9:00 una editora y un backend reciben un toast cada uno, conversan 4 turnos **en el lenguaje de su oficio**, y ambos tableros quedan actualizados sin que nadie toque un formulario.
 
 ### Fase 4b — Canal Slack (semana 12, opcional)
@@ -425,7 +431,7 @@ Webhooks de GitHub con verificación de firma, parser de `[A-Z]+-\d+` en commits
 
 ---
 
-## 9. Multi-organización (diseñado, no construido)
+## 9. Multi-organización (construido de punta a punta)
 
 Hasta acá el plan asume **una instancia = una empresa**: el primer admin nace de `Bootstrap__AdminEmail`, no hay registro, y todos los proyectos son de todos. Esta sección lo abre a varias empresas sobre el mismo despliegue, como hacen GitHub, GitLab y Azure DevOps.
 
@@ -439,7 +445,7 @@ Quien se registra **crea la organización** y queda como su primer `Owner`.
 
 | Nivel | Quién es | Alcance |
 |---|---|---|
-| **Operador de plataforma** | Quien hospeda TaskAdmin | La lista de organizaciones: altas, suspensión, métricas de uso. **No** el contenido de los proyectos |
+| **Operador de plataforma** | Quien hospeda Borlaro TMS | La lista de organizaciones: altas, suspensión, métricas de uso. **No** el contenido de los proyectos |
 | **Owner / Admin de organización** | Quien abrió la cuenta de su empresa | Todo lo de *su* organización. Es el `Admin` de hoy, acotado |
 | **Manager / Colaborador / Cliente** | Los roles ya existentes | Igual que hoy, dentro de su organización |
 
@@ -459,7 +465,7 @@ Fundir los dos primeros niveles en un solo rol haría imposible expresar «este 
 
 Consecuencias concretas sobre el esquema actual:
 
-- `User.Email` y `Project.Key` pasan de únicos globales a únicos **por organización** (`TaskAdminDbContext.cs`, líneas 53 y 120). Así dos empresas pueden tener cada una su proyecto `DEV`.
+- `User.Email` y `Project.Key` pasan de únicos globales a únicos **por organización** (`BorlaroTmsDbContext.cs`, líneas 53 y 120). Así dos empresas pueden tener cada una su proyecto `DEV`.
 - `ProjectTemplate.Key`, `Label` y los contadores de `NextItemNumber` quedan igualmente por organización.
 - `IntakeToken` y los tokens de dispositivo siguen siendo únicos globales: son secretos, no nombres.
 - La migración asigna todo lo existente a la organización #1, que es la instancia actual.
@@ -495,6 +501,8 @@ Ninguna deja la app a medio funcionar.
 - **9d — Configuración por organización. ✅ Construido.** Catálogo partido por alcance (`SettingsCatalog.ScopeOf`), tabla `OrganizationSettings` con herencia de la plataforma, resolvedor de `AgentModel` y `Email` por organización, y consumo de tokens de 30 días por empresa en la consola del operador.
 
 ### Verificación
+
+Esta lista se escribió **antes** de construir, y quedó en imperativo. Las cuatro etapas 9a–9d están marcadas como construidas arriba, pero acá no hay resultados anotados: tratala como el plan de prueba a correr, no como prueba corrida.
 
 - **Aislamiento (la prueba que importa):** dos organizaciones con un proyecto `DEV` cada una. Confirmar que el Admin de A no ve ni un work item, usuario, entregable, mensaje directo ni notificación de B — incluidos los endpoints que buscan por ID directo, no solo los listados.
 - **Contadores:** crear tareas en paralelo en el `DEV` de A y el de B; confirmar `DEV-1` en las dos, sin huecos ni duplicados.
@@ -561,9 +569,38 @@ Cómo quedó resuelto el catálogo de ajustes: sus etiquetas y ayudas viven en e
 
 `WorkflowStages.DefaultAssigneeId`, nulo por defecto. Nulo significa «acá el trabajo no cambia de manos», que es lo correcto para etapas de tránsito como «Bloqueado».
 
+### Varios responsables por etapa, y quién de ellos recibe
+
+Un solo responsable por etapa alcanza mientras la etapa la atiende una sola persona. En cuanto son tres editores, obliga a elegir uno y a que los otros dos miren: o el elegido se convierte en cuello de botella, o alguien reparte a mano todos los días, que es justo lo que la etapa venía a evitar.
+
+**La etapa tiene una lista, no un titular.** `StageResponsibles` —`StageId`, `UserId`, `Order`— es quiénes *pueden* recibir trabajo acá. Y `WorkItemStageAssignments` —`WorkItemId`, `StageId`, `AssignedUserId`— es la excepción por tarea: «esta pieza, cuando llegue a Edición, es de Ana». Se escribe antes de que la tarea llegue, que es cuando se sabe.
+
+**Al mover una tarea se resuelve en cuatro pasos, y el primero que contesta manda:**
+
+1. **Asignación específica** para esa tarea en esa etapa (`WorkItemStageAssignments`) → esa persona. Lo decidió alguien, así que le gana a cualquier cálculo.
+2. **Lista de responsables** de la etapa → el **de menos carga**, contando sus tareas abiertas (`ClosedAt == null`); empate se rompe por `Order`, que es el orden en que se los cargó. Solo entran los activos: a una cuenta inactiva no se le apila trabajo.
+3. **Titular único de la etapa** (`DefaultAssigneeId`) → esa persona, si está activa. Es como se configuraba antes de que existieran las listas, y sigue siendo lo que edita el encabezado de columna del tablero. **Este paso no es transición: es el modo normal de la mayoría de los proyectos**, y sin él un proyecto configurado a la vieja deja de relevar en silencio en cuanto se aplica la migración de las listas.
+4. **Etapa sin configurar** → no cambia de manos. La tarea sigue con quien la tenía, que es lo correcto en etapas de tránsito como «Bloqueado».
+
+La diferencia entre **«no hay a quién darle»** (pasos 1–3 con la etapa configurada y nadie activo) y **«no hay que darle a nadie»** (paso 4) es la que decide si esto es un modo de falla o el funcionamiento normal. Se distingue explícitamente, y de ahí sale el aviso de etapa huérfana de más abajo.
+
+Se reparte por **carga actual y no por turno rotativo** a propósito. El round-robin puro reparte parejo el *número de asignaciones* y desparejo el *trabajo*: a quien tiene seis tareas abiertas le toca la séptima igual que a quien no tiene ninguna. Contar lo abierto es la aproximación más barata a «quién puede tomar esto ahora» sin pedirle a nadie que estime nada.
+
+**Queda registrado que lo eligió el sistema.** `WorkItems.AssignedBySystem` distingue un dueño calculado de uno puesto por una persona. Sin esa marca, un reparto automático desafortunado es indistinguible de una decisión de alguien, y nadie sabe si corregirlo o respetarlo.
+
+**Y queda de dónde venía**, en `PreviousAssigneeId` y `PreviousStageId`: es lo que hace posible la devolución. Cuando una etapa rechaza algo, el camino de vuelta no es «asignar a alguien» sino «volvérselo a quien lo mandó», y eso hay que haberlo guardado en el momento del pase.
+
+**Repartir trabajo es un permiso propio, no un rol.** `Users.CanAssignTasks`, además del permiso del proyecto: quien administra un proyecto no necesariamente es quien decide la carga de la gente, y en equipos con un coordinador esas dos cosas viven en personas distintas.
+
+**Nace encendido, porque es una restricción y no una concesión.** Al agregarse apagado le quitó de golpe a todo el mundo —administradores incluidos— la capacidad de repartir trabajo que tenían desde siempre, y sin ninguna pantalla donde devolvérsela. Encenderlo para todos no le da a nadie nada nuevo: se comprueba *además* del permiso sobre el proyecto, así que quien no lidera sigue sin poder asignar.
+
+Las listas se administran en `/projects/{key}/stages/{stageId}/responsables` (GET, POST, DELETE), y las tres comprueban las dos cosas: el permiso sobre el proyecto y el `CanAssignTasks` de la persona.
+
 **La regla del aviso: se avisa cuando cambia de manos, no cuando cambia de estado.** Si la etapa destino tiene el mismo responsable que ya tenía la tarea, no se dice nada: la persona acaba de hacerlo y contarle lo que ya sabe es la forma más rápida de que aprenda a ignorar los avisos que sí importan.
 
 **Y un relevo no es un check-in**, así que no reusa la escalera. Un check-in insiste, sube a email y termina avisándole al responsable, porque su falta de respuesta significa algo. Un relevo dice «te llegó esto»; que no lo abras en 45 minutos significa que estás trabajando en otra cosa. Aviso plano, sin peldaños.
+
+**Los avisos se agrupan.** Si a la misma persona le caen cuatro tareas en diez minutos, cuatro globos son ruido y uno es información. El relevo no se manda: se encola, y un barrido junta lo que cayó dentro de una **ventana de 2 minutos** (`HandoffService.Ventana`) en un solo aviso.
 
 **El modo de falla que se cubrió explícitamente.** Si el responsable de una etapa queda inactivo, el trabajo se apilaría en silencio sobre una cuenta muerta. En vez de eso la tarea queda **sin asignar** —visible en el tablero— y se les avisa a los administradores. Un ruteo automático que falla callado es peor que el manual.
 
@@ -571,9 +608,15 @@ Cómo quedó resuelto el catálogo de ajustes: sus etiquetas y ayudas viven en e
 
 Quien no puede repartir trabajo **lo ve pero no lo edita**: enterarse de a quién le va a llegar lo que uno termina no es un privilegio de administración.
 
-✅ **Construido y verificado**: se configuró un responsable en «Redacción», se movió una tarea de otra persona desde fuera del navegador, y cambió de dueño sola.
+✅ **Construido y verificado** (un responsable por etapa): se configuró un responsable en «Redacción», se movió una tarea de otra persona desde fuera del navegador, y cambió de dueño sola. Los avisos se agrupan en la ventana de 2 minutos.
 
-⏳ **Pendiente:** agrupar los avisos. Si a alguien le caen cuatro tareas en diez minutos hoy recibe cuatro globos, y debería ser uno.
+⚠️ **Construido, sin verificar** (varios responsables): las dos tablas, el reparto por menor carga, los tres endpoints y la cadena de cuatro pasos compilan y están migrados, pero **no se probaron contra la base ni de punta a punta**. El reparto por lista, el aviso de huérfana y la caída al titular único están escritos y sin ejercitar.
+
+⏳ **Pendiente:**
+
+**Resuelto:** el encabezado de columna del tablero ahora administra **la lista** —se marca y desmarca gente, y con una sola persona se comporta igual que el titular único—. `CanAssignTasks` tiene su interruptor en la pantalla de Personas junto a los otros dos permisos.
+
+⏳ **Pendiente:** retirar `DefaultAssigneeId`. Ya no se edita desde ningún lado y solo sobrevive como paso 3 para las etapas configuradas antes de que existieran las listas; el desplegable lo dice explícitamente cuando pasa. Migrar cada titular a una lista de un elemento y borrar el campo es la limpieza que queda, y conviene hacerla después de ver el reparto por lista funcionando con datos reales.
 
 ## 13. Tiempo real en la interfaz
 
@@ -609,9 +652,9 @@ Corregido: **la propia, o cualquiera si sos operador** —que es quien las lista
 
 ### La marca del encabezado es la empresa, no la plataforma
 
-El nombre del software estaba primero y grande, y la organización al lado en gris chico. Está al revés de cómo se usa: quien abre esto todos los días trabaja para su empresa, y «TaskAdmin» es un dato de quién proveyó el software —además de un nombre provisorio—.
+El nombre del software estaba primero y grande, y la organización al lado en gris chico. Está al revés de cómo se usa: quien abre esto todos los días trabaja para su empresa, y «Borlaro TMS» es apenas un dato de quién proveyó el software.
 
-Ahora la barra abre con el **logo de la organización a 36 px y su nombre a 16 px semibold**; la marca de la plataforma quedó como texto de 11 px, apagado y sin enlace, contra el borde derecho. En la consola del operador sigue mandando «TaskAdmin»: el operador no pertenece a ninguna empresa, así que no hay logo que poner en su lugar.
+Ahora la barra abre con el **logo de la organización a 36 px y su nombre a 16 px semibold**; la marca de la plataforma quedó como texto de 11 px, apagado y sin enlace, contra el borde derecho. En la consola del operador sigue mandando «Borlaro TMS»: el operador no pertenece a ninguna empresa, así que no hay logo que poner en su lugar.
 
 **Una organización sin logo dibuja su inicial** sobre un fondo neutro, del mismo tamaño que ocuparía el logo. Sin eso, la cabecera de quien no cargó ninguno se veía rota en vez de sobria — y cambiaba de forma según el caso.
 
@@ -635,13 +678,211 @@ Suspender cubre el caso normal —cortar el acceso por falta de pago o por abuso
 
 **El orden de borrado y por qué es frágil a propósito.** Las 27 tablas que apuntan a `Organizations` lo hacen con `ON DELETE RESTRICT`, así que hay que vaciarlas de hijas a madres, en una lista explícita. Una tabla nueva que nadie agregue a esa lista queda afuera —y entonces el borrado de la organización falla por la clave foránea y la transacción entera se deshace—. Es decir: **el `RESTRICT` que obliga a la lista es también lo que impide un borrado a medias.** Falla ruidosamente y sin tocar nada, que es el modo de falla que se quiere en algo irreversible.
 
+> **Esto ya pasó una vez, y por eso la lista se mira en cada migración.** `StageResponsibles` y `WorkItemStageAssignments` (§12) entraron con `RESTRICT` hacia `Organizations` y nadie las sumó, así que durante dos días el borrado de cualquier organización con proyectos falló por clave foránea. Ya están en la lista, antes de `WorkItems` y `WorkflowStages`, que es de quienes cuelgan. La regla operativa: **toda migración que agregue una tabla con `OrganizationId` toca también esa lista, en el mismo commit.**
+
 **Los archivos se borran después de que cierre la transacción.** Las rutas se leen antes —después no hay de dónde sacarlas—, pero el borrado en disco va al final: si se borraran adentro y la transacción fallara, los archivos ya no estarían y las filas seguirían apuntándolos. Al revés, un archivo que no se pudo borrar solo ocupa disco.
 
 **Y queda en el log del servidor**, porque en la base no queda nada: borrada la organización se fue también cualquier registro que hubiéramos escrito adentro suyo.
 
 ✅ **Construido y verificado**: las tres barreras rechazan como corresponde, una organización real se borró con su archivo, y una consulta de filas huérfanas sobre seis tablas devolvió cero.
 
+⚠️ **La verificación es anterior a las dos tablas de responsables de §12.** Ya están en la lista de borrado, pero la prueba no se volvió a correr desde entonces: hay que repetirla sobre una organización que tenga responsables de etapa cargados.
+
 ⏳ **Pendiente:** exportar antes de borrar. Hoy la única forma de conservar algo es el respaldo de la base.
+
+---
+
+## 16. Qué puede hacer el responsable con su propia tarea
+
+**El problema que resuelve.** «Responsable de una tarea» parece un permiso solo, y son tres muy distintos: moverla de etapa, reescribir su enunciado y borrarla. Darlos juntos —que es lo que sale por defecto en casi todos los trackers— hace posible que quien ejecuta el trabajo cambie el trabajo que se le pidió, y en un sistema cuyo diferenciador es que el tablero cuenta la verdad, eso lo vuelve incontable.
+
+**Los permisos son por tarea, no por rol ni por proyecto.** Se deciden al asignarla y los cambia el líder desde el panel de la tarea. Por rol serían demasiado gruesos: la misma persona puede ser dueña del enunciado de una tarea que ella misma levantó y mera ejecutora de otra que le bajaron.
+
+`WorkItems.AssigneeCanMove` (por defecto **`true`**), `AssigneeCanEdit` y `AssigneeCanDelete` (por defecto **`false`**).
+
+**Los valores por defecto no son neutros, y ahí está toda la decisión:**
+
+| Permiso | Por defecto | Por qué |
+|---|---|---|
+| Mover de etapa | **sí** | Es el trabajo diario de quien ejecuta, y es lo que alimenta al agente. Sin esto, cada avance necesita a un tercero y el tablero se atrasa respecto de la realidad — que es exactamente lo que este producto viene a evitar. |
+| Editar título, fechas y campos | **no** | Editar el enunciado es cambiar el encargo, y el encargo es de quien lo dio. Un responsable que puede reescribir su tarea puede hacer que siempre parezca cumplida. |
+| Borrar la tarea | **no** | Se lleva el historial, que es el registro de lo que pasó. |
+
+**Nadie puede ampliarse los permisos a sí mismo.** Sin ese corte, quien tiene permiso de editar se da permiso de borrar y el esquema entero es decorativo. Lo comprueba el endpoint aparte de comprobar quién es el líder.
+
+**Cada cambio de permiso queda en el historial** como `permiso:mover`, `permiso:editar` o `permiso:borrar`. Un permiso que cambia sin dejar rastro es indistinguible de uno que siempre estuvo así.
+
+✅ **Construido y verificado** con sesiones reales: por defecto el responsable mueve (permitido), edita (403) y borra (403); al quitarle mover y darle editar, se invierte; no puede ampliarse los permisos a sí mismo (403); y cuando el líder le habilita borrar, borra.
+
+---
+
+## 17. Archivar un proyecto
+
+**El problema que resuelve.** Un proyecto que terminó no se borra —su historial es el registro de lo que hizo el equipo, y es lo que se consulta cuando alguien pregunta cómo se resolvió algo el año pasado— pero tampoco puede seguir ocupando lugar en la lista de todos los días. Sin archivado, la única salida es borrar, y entonces la gente no borra: acumula proyectos muertos hasta que la lista deja de servir.
+
+**Archivar tiene que significar algo más que ocultar.** Si un proyecto archivado sigue admitiendo trabajo nuevo, el archivado es una etiqueta cosmética y en algún momento alguien carga una tarea en un proyecto que nadie mira. Por eso `WorkItemService` rechaza crear trabajo sobre un proyecto archivado, con un mensaje que dice cómo salir del paso: reactivalo. Lo que ya existe adentro sigue siendo consultable y se puede seguir moviendo — cerrar lo que quedó abierto es parte de terminar.
+
+`Projects.IsArchived`, más `ArchivedAt` y `ArchivedById`. Los dos últimos no son adorno: sin ellos, «este proyecto está archivado» no se le puede reclamar a nadie.
+
+**Se deshace.** Es el mismo endpoint con `?undo=true`, y lo limpia todo —marca, fecha y autor—. Archivar por error tiene que costar un clic deshacerlo; si costara un ticket, nadie archivaría.
+
+**Lo hace quien lidera el proyecto o un administrador** (`CanManageProject`), y la lista devuelve `SoyLider` para ofrecer el botón solo a quien puede usarlo. Los archivados salen de la lista por defecto y se ven con el filtro `archivados`; dentro de la lista ordenan al final, porque un proyecto terminado no compite por la atención con uno en curso.
+
+✅ **Construido**: entidad, endpoint con deshacer, filtro en la lista, y el rechazo de trabajo nuevo en el servicio de dominio.
+
+⏳ **Pendiente:** que el agente ignore los proyectos archivados. Hoy el rechazo vive solo en la creación de work items; una tarea que quedó abierta en un proyecto archivado sigue siendo trabajo asignado a los ojos del check-in, así que el agente puede preguntar por ella. Cerrar el proyecto debería ser también dejar de perseguir a la gente por lo que quedó adentro.
+
+---
+
+## 18. El nombre: de TaskAdmin a Borlaro TMS
+
+`TaskAdmin` era provisorio y quedó reemplazado por **Borlaro TMS**. Se registra acá porque el cambio no fue parejo, y quien lea el código va a encontrarse con el nombre viejo en lugares donde sigue estando **a propósito**.
+
+**Lo que sí cambió:** la marca visible (interfaz en los tres idiomas, emails, README, este plan, el manual), y los identificadores de código. Los cinco proyectos pasaron a `Borlaro.Tms.*` con sus namespaces, la solución a `Borlaro.Tms.sln` y el contexto a `BorlaroTmsDbContext`. El binario de escritorio es `BorlaroTms.exe`, **sin espacio**: su ruta se escribe sin comillas en la clave `Run` del registro para el autoarranque, y un espacio ahí la parte en dos y la app no levanta.
+
+**Lo que deliberadamente no cambió, y por qué.** Todo lo que nombra algo que ya existe en una máquina que sirve la aplicación:
+
+| Sigue diciendo `taskadmin` | Qué pasaría si se renombrara |
+|---|---|
+| `POSTGRES_DB`, `POSTGRES_USER`, la cadena de conexión | Postgres no renombra una base al arrancar: el contenedor levantaría una vacía y los datos quedarían en la vieja, invisibles. Requiere dump y restore a mano |
+| `container_name` de los tres servicios | Docker crearía contenedores nuevos al lado de los que están corriendo |
+| `TASKADMIN_DOMAIN` | Está en el `.env` de cada instalación; renombrarla las rompe hasta que alguien edite ese archivo |
+| `C:\Respaldos\TaskAdmin` y la tarea programada del respaldo | Arrancaría una serie de respaldos nueva dejando la vieja sin rotar, y una segunda tarea al lado de la que ya corre |
+
+La regla de fondo: **renombrar es gratis en el código y caro en el estado.** Lo que solo existe en el repositorio se renombra; lo que además existe en un disco ajeno se migra a mano o no se toca. Estos nombres se pueden migrar más adelante, de a uno y con la instalación parada; ninguno es visible para quien usa la aplicación.
+
+✅ **Construido y verificado**: la solución compila con 0 errores tras mover los cinco proyectos, y el frontend construye. El `docker-compose.yml` y el `Dockerfile` ya apuntan a las rutas nuevas.
+
+⏳ **Pendiente:** levantar el compose y confirmar que la imagen se construye de punta a punta con las rutas nuevas — el build de .NET y el de Vite se probaron sueltos, no dentro de Docker.
+
+---
+
+## 19. Tiempo, dificultad, y el líder enterándose
+
+**El problema que resuelve.** Una tarea decía cuándo vencía y nada más. No decía cuánto se pensaba que iba a costar, ni qué tan difícil era, ni —sobre todo— **cuánto terminó costando de verdad**. Sin eso, «la tarea se atrasó» es todo lo que se puede saber, y no alcanza para nada: no distingue la tarea que se subestimó de la que se frenó, ni la persona sobrecargada de la que se trabó en algo puntual. Y el agente, que es lo que este producto tiene de distinto, conversaba a ciegas: podía registrar avance pero no podía preguntar lo único que hace falta preguntar cuando algo no está listo, que es **cuánto más falta**.
+
+Del otro lado, quien lidera un proyecto se enteraba de todo tarde y por casualidad. El agente hablaba con cinco personas, cambiaba tareas de etapa y registraba bloqueos, y nada de eso llegaba a quien tenía que saberlo salvo que fuera a mirar el tablero.
+
+### La estimación: una original que no se toca, y ampliaciones que se apilan
+
+`WorkItems.Estimate` pasa a significar **horas estimadas originales** —antes decía «horas o puntos», que no era ni una cosa ni la otra— y no se sobrescribe nunca después de la primera vez. Cada vez que hace falta más tiempo se agrega una fila en `WorkItemTimeExtensions`: `Hours`, `Reason`, quién la agregó (`ActorType` + `ActorId`, así que el agente queda distinguido de una persona), el `CheckInId` que la originó si vino de una conversación, y `CreatedAt`.
+
+**Por qué una tabla y no un número que se edita.** Un solo campo que se pisa contesta «cuánto falta» y borra «cuánto nos equivocamos». Y esa segunda pregunta es la que sirve: una tarea de 4 horas que terminó en 20 no es un dato sobre esa tarea, es un dato sobre cómo estima ese equipo. Con el campo editable, esa historia se pierde en el momento exacto en que se vuelve interesante.
+
+`WorkItems.AddedHours` guarda la suma, denormalizada. No es la fuente de verdad —esa es la tabla— pero el tablero y los listados necesitan mostrar el total sin sumar filas en cada consulta. **El total comprometido es `Estimate + AddedHours`.**
+
+**No se descartó el triple de Azure DevOps por simplicidad, sino porque el dato que pide se pudre.** *Remaining Work* obliga a que alguien mantenga «cuánto falta» al día en cada check-in, y es justo el campo que en todos los equipos queda con el valor del primer día. Preguntar «¿cuántas horas más?» cuando algo no terminó es una pregunta que se puede contestar de memoria; «¿cuánto te queda en total?» no.
+
+### La dificultad: tres niveles, y para qué sirven
+
+`WorkItems.Difficulty` —`Baja`, `Media`, `Alta`—. Tres niveles y no puntos Fibonacci porque el producto sirve a varias disciplinas y los puntos son jerga de una sola: pedirle story points a quien edita video es pedirle que traduzca su oficio al de otro.
+
+**Su función no es reportar, es modular al agente.** Una tarea Alta que se atrasa es lo esperable, y ahí preguntar cuánto más falta es una conversación normal. Una que se atrasa estando en un nivel bajo significa que pasó algo que nadie previó. Sin dificultad, el agente trata igual los dos casos y se equivoca en los dos.
+
+**Es obligatoria y no tiene valor por defecto.** Ninguna tarea se crea sin que alguien elija el nivel: el formulario arranca vacío, el `select` es `required` y el endpoint devuelve 400 si falta. Un campo del que cuelga una conducta no puede ser opcional —quedaría vacío en la mayoría de las tareas y la conducta no se activaría nunca— pero tampoco puede tener default, que es la trampa sutil: con un valor de fábrica, `Baja` pasaría a significar a la vez «es fácil» y «nadie lo eligió», y el agente estaría modulando sobre un dato que la mitad de las veces no dijo nadie. **Cuesta un clic y salva el dato.**
+
+**El nivel puede cambiar.** Una tarea que resultó más difícil de lo que parecía se reclasifica desde el panel de detalle, y el cambio queda en el historial como cualquier otro. El agente además avisa en su resumen cuando lo que le contaron no se parece al nivel que la tarea tiene.
+
+**Las dos excepciones, y por qué lo son.** Hay dos caminos donde no hay nadie del equipo que pueda juzgar:
+
+- **El formulario público de intake.** Quien crea es alguien de afuera de la organización, y preguntarle a un cliente qué tan difícil le resulta a este equipo su propio pedido no tiene sentido. Entra en `Media`. No es un problema práctico: un pedido de intake entra sin responsable y el agente solo habla de trabajo asignado, así que para cuando lo vea, alguien lo tomó y pudo corregirlo.
+- **La tarea que propone el agente** con `create_followup_task`. Acá sí hay quien opine: **el nivel lo propone el agente**, que acaba de conversar sobre ese trabajo, y es un parámetro obligatorio de la herramienta. Quien aprueba lo ve antes de decidir. Si el modelo manda cualquier cosa, cae en `Media`.
+
+En los dos casos el valor de reserva es `Media` y no `Baja`: es el punto medio y no arrastra al agente hacia ninguno de los extremos. Por lo mismo, la migración pone en `Media` las tareas anteriores al campo — ponerlas en `Baja` afirmaría que alguien las consideró fáciles.
+
+**Cada proyecto les pone el nombre que quiera, pero la escala no se toca.** `Project.DifficultyLabelLow/Medium/High`, nulos por defecto; se cargan al crear el proyecto y se editan después en `PUT /api/projects/{key}/dificultad`. Es el mismo mecanismo que ya existía para `ItemNounSingular` y los tipos de tarea: el vocabulario es del proyecto.
+
+Lo que **no** se abre es la escala —ni más niveles, ni menos, ni sin orden—, y no por simplicidad sino por tres razones concretas:
+
+- **El agente usa la posición, no la palabra.** Necesita saber cuál extremo es cuál. Con tres posiciones fijas lo sabe siempre; con una escala libre tendría que inferirlo, y lo inferiría mal alguna vez. Por eso el contexto le llega como «dificultad Compleja (Alta)»: la etiqueta para hablarle a la persona, el nivel para decidir.
+- **Se lo estaríamos pidiendo al modelo con menos margen.** §11 documenta que el Q3 gana sobre el Q4 justamente porque duda. Con ocho niveles, «se atrasó una de nivel 3» no tiene respuesta obvia: el modelo se inventa el umbral, y dos modelos —o el mismo en dos días— se inventan umbrales distintos.
+- **Se perdería el eje común entre proyectos.** El digest y el chat del manager (§4) tienen que contestar «¿qué está en riesgo esta semana?» sobre toda la organización. Con una escala por proyecto, esa pregunta no tiene respuesta.
+
+Un equipo que necesite una taxonomía propia de verdad ya tiene los **campos personalizados de tipo `Select`**, que existen para eso: el agente los ve en el contexto y hasta puede escribirlos, pero no razona sobre ellos —correcto, porque nadie le explicó qué significan—. Esa es la línea: `Difficulty` es el campo con semántica que el agente entiende, y los campos personalizados son todo lo demás. Abrir la escala borraría la diferencia y dejaría dos mecanismos haciendo lo mismo mal.
+
+**La estimación original se congela cuando la tarea arranca** —cuando tiene avance o alguna ampliación—. Antes de eso se corrige libremente: un número mal tipeado el primer día es un error y prohibir arreglarlo obligaría a rehacer la tarea. Después, no: bajarla cuando ya se agregaron doce horas hace que el trabajo entre en lo estimado retroactivamente, y borra el único dato que esta sección existe para conservar. El camino correcto para decir que hace falta más tiempo es agregarlo, no reescribir el pasado.
+
+**Una ampliación se puede anular, y anular no es borrar.** `VoidedAt`, `VoidedById` y `VoidReason`; una anulada no cuenta para el total pero se sigue viendo, tachada. Hace falta porque **estas filas las escribe el agente solo**: si el modelo entiende mal, o la persona tira «como seis» y resulta que era una, sin esto quedan seis horas registradas para siempre. Y se conserva porque «acá hubo una ampliación que resultó estar mal» es información —es cómo alguien se entera de que el agente se equivocó—; borrarla deja el historial contando una versión prolija de algo que no pasó así. **Anular es de quien lidera**, no de quien tiene la tarea: si pudiera anularlas el responsable, controlaría el registro de cuánto costó su propio trabajo.
+
+**`AddedHours` se recalcula entero desde la tabla, nunca se incrementa.** Sumar de a poco funciona mientras haya un solo camino de escritura y deja de funcionar apenas aparece el segundo —anular—, porque ahí hay dos lugares que pueden equivocarse y ninguno se entera del otro.
+
+### El agente pregunta por las horas, y no pide permiso para registrarlas
+
+Herramienta nueva `add_time_estimate` (`work_item_id`, `hours`, `reason`). Cuando la persona dice que no terminó, el agente pregunta cuántas horas más calcula, y registra la respuesta.
+
+**Se aplica en el acto, a diferencia de `request_date_change`, que sigue yendo a la cola de aprobación.** La distinción es deliberada y vale la pena entenderla: mover una fecha de entrega **cambia un compromiso con un tercero**, y eso no lo puede decidir la persona que se atrasó. Agregar horas **no cambia ningún compromiso: registra lo que ya está pasando.** Mandarlo a una cola tendría el efecto de que el dato llegue tarde o no llegue, y un registro de tiempo que depende de que alguien lo apruebe deja de ser un registro.
+
+Lo que sí es innegociable: **cada ampliación avisa**, al líder del proyecto y a los administradores. Es el único punto donde el sistema dice «esto está costando más de lo que se dijo» mientras todavía se puede hacer algo.
+
+### La fecha de entrega: se espera al arrancar, no se exige nunca
+
+**El problema.** Una tarea en el backlog dentro de tres meses no tiene compromiso con nadie y ponerle fecha es inventar un dato. Pero una que alguien ya está haciendo sin fecha es trabajo que nadie sabe cuándo llega — y sin `DueDate` se apagan tres cosas a la vez: el aviso `item.overdue`, el orden de «mis tareas», y una de las cuatro señales del modo «cuando hace falta».
+
+**La decisión: nunca bloquear, siempre avisar.** Entrar a una etapa `InProgress` sin fecha **se permite**. Bloquear el movimiento dejaría a alguien sin poder trabajar por un campo de planificación que no le toca completar, y castigaría a quien ejecuta por la omisión de quien lidera. En vez de eso: la tarjeta lo muestra en el tablero, y quien lidera recibe la novedad `item.started_without_date`.
+
+Es el mismo patrón que el resto del sistema ya usa —la etapa huérfana de §12 deja la tarea sin asignar y avisa, el cambio de fecha de §19 se propone en vez de aplicarse— y bloquear acá habría sido la única excepción.
+
+**Fijar una fecha es un permiso propio**, `User.CanSetDueDate`, porque una fecha es un compromiso con un tercero: o se confía en que esa persona los asuma, o no, y eso no cambia según la tarjeta. Quien no lo tiene sigue moviendo tareas y registrando avance; lo único que no puede es prometer una entrega. Es también lo que resuelve el reemplazo por vacaciones sin regalar el proyecto entero — aunque para eso alcanza además con **agregar un segundo líder**, que los líderes ya son una lista.
+
+**Crear tareas también es un permiso propio**, `User.CanCreateTasks`, para el caso inverso: quitárselo a quien solo debe ejecutar lo que le dan.
+
+Los dos, como `CanAssignTasks`, **nacen encendidos**: son restricciones que alguien aplica a mano, no permisos que haya que conceder de a uno. Los tres se editan en la pantalla de Personas, que es donde se los busca.
+
+### El agente y las etapas
+
+El contexto le llegaba con el **nombre** de la etapa y no con su categoría, así que el modelo no tenía forma de saber si «Redacción» era trabajo en curso o una fila de espera. Ahora recibe `etapa Redacción (InProgress)`, y con eso se habilita la conversación que faltaba:
+
+**Cuarta señal para el modo «cuando hace falta».** A las tres que había —vencida, estancada, bloqueada— se suma **«no tiene nada en curso pero sí cosas por hacer»**. No hay nada roto todavía; lo que hay es una persona a punto de elegir en qué gasta el día, y ese es el único momento en que preguntar cambia algo. El agente le ofrece las de `Todo` y le pregunta cuál toma. Si tampoco tiene nada por hacer, no escribe.
+
+### El panel de novedades del líder
+
+Página propia (`/novedades`) con campana y contador de no leídas en el encabezado. Se alimenta de la tabla `Notifications`, que ya existía para la escalera de entrega y hasta ahora no tenía dónde leerse dentro de la aplicación.
+
+Cinco clases de novedad, que son las cinco cosas que quien lidera necesita saber sin ir a buscarlas:
+
+| `Kind` | Cuándo |
+|---|---|
+| `item.overdue` | Una tarea pasó su fecha de entrega sin cerrarse |
+| `checkin.opened` | El agente le escribió a alguien del proyecto |
+| `checkin.answered` | La persona respondió, **con el resumen de qué dijo** |
+| `item.time_extended` | Se agregaron horas, con cuántas y por qué |
+| `item.stage_changed_by_agent` | El agente movió una tarea de etapa |
+| `item.started_without_date` | Una tarea entró en curso sin fecha de entrega |
+
+**Se avisa al líder del proyecto y a los administradores, no a todo el mundo.** Una novedad que le llega a diez personas no la atiende ninguna: cada una supone que la mira otra. Y `checkin.answered` lleva el resumen de la respuesta y no solo «respondió»: un aviso que obliga a abrir otra pantalla para saber qué pasó es un aviso que se ignora a la tercera vez.
+
+**Los check-ins no cuelgan de un proyecto**, así que sus destinatarios se resuelven por persona: quien lidera algún proyecto donde esa persona tiene trabajo abierto. Es exactamente quien necesita saber que respondió.
+
+**`item.overdue` la detecta un barrido y se avisa una sola vez.** Vencer no es un hecho que alguien dispare —es que pase el tiempo—, y sin la marca `WorkItems.OverdueNotifiedAt` cada pasada del barrido volvería a contar lo mismo y el feed quedaría inservible en una tarde. La marca se limpia al mover la fecha: reprogramar y volver a vencer sí es una novedad. El barrido toma 50 por pasada, para que una instalación que arranca con mil vencidas no genere mil avisos por destinatario de una vez.
+
+**Las novedades leídas se podan a los 30 días.** Cada una escribe una fila **por destinatario**, así que un proyecto con tres líderes y dos administradores multiplica por cinco cada aviso, y hasta acá lo único que vaciaba la tabla era borrar la organización. Solo las leídas: que nadie haya mirado una en un mes es un problema, y desaparecerla lo esconde en vez de resolverlo.
+
+**Es un feed, no una bandeja de entrada.** No se contesta desde ahí; cada novedad enlaza a la tarea o al check-in. Mezclarlo con los mensajes directos —que fue la alternativa— habría hecho que lo automático tape lo humano, que es el modo en que estas dos cosas siempre conviven mal.
+
+⚠️ **Construido entero y desplegado; falta el uso real.**
+
+✅ Verificado contra la base: las seis migraciones aplicadas (`MultiplesResponsables`, `PermisoAsignarPorDefecto`, `TiempoDificultadYNovedades`, `AnulacionDeAmpliacionYAvisoDeVencimiento`, `DificultadObligatoriaYEtiquetas`, `PermisosDeFechaYCreacion`), `Difficulty` quedó NOT NULL con las filas anteriores en `Media`, las tres tablas nuevas creadas, las tres etiquetas en `Projects`, y los tres permisos encendidos en las 9 cuentas existentes. La API arranca sana (`/health` 200, sin errores en el log), el frontend construye y sirve sin errores de consola, y las rutas nuevas responden 401 —existen y exigen sesión— contra el 404 de una ruta inventada.
+
+⚠️ **Lo que no está verificado es el comportamiento con sesión**: ninguna de las pantallas nuevas se ejercitó con datos reales, y el agente no conversó ni una vez con las herramientas nuevas.
+
+Lo que quedó escrito:
+
+- El modelo: `AddedHours`, `Difficulty`, `OverdueNotifiedAt`, la tabla `WorkItemTimeExtensions` con su anulación, y el recálculo de `AddedHours` desde la tabla. La tabla nueva entró en la lista de borrado de §15.
+- La herramienta `add_time_estimate` —las del agente pasaron de nueve a diez—, las instrucciones para preguntar por las horas sin inventarlas y modular según la dificultad, y el contexto de tareas con el tiempo como «original + agregadas» y la dificultad como «etiqueta del proyecto (nivel real)».
+- La dificultad obligatoria en los tres caminos de alta, editable después, y renombrable por proyecto desde el alta o con `PUT /api/projects/{key}/dificultad`.
+- `CanSetDueDate` y `CanCreateTasks`, con sus cortes en la API, en la sesión y con sus interruptores en Personas — donde además apareció que `CanAssignTasks` llevaba desde su migración sin ninguna pantalla.
+- La fecha de entrega y la estimación **editables desde el panel de detalle**, que era el agujero concreto: la API las aceptaba desde siempre y ninguna pantalla las mostraba.
+- El congelamiento de la estimación original y el endpoint de anulación, restringido a quien lidera.
+- `FeedService` completo con las cinco novedades emitiendo, el barrido de vencidas y la poda de leídas, los dos enganchados al barrido de check-ins que ya existía.
+- La API del feed y la de ampliaciones.
+- La interfaz: fecha, horas y dificultad en el formulario de creación; el bloque de tiempo con las ampliaciones y su anulación en el panel de detalle; `/novedades` con la campana y el contador en el encabezado. Todo en los tres idiomas.
+
+⏳ **Pendiente — todo requiere una sesión y datos reales:**
+
+- Que el agente pregunte por las horas y las registre; que una ampliación se pueda anular y el total vuelva atrás; que la estimación congelada rechace el cambio; que las seis novedades lleguen a quien corresponde y a nadie más.
+- Que la dificultad obligatoria no trabe el alta rápida, y que el reparto por lista elija efectivamente al de menos carga.
+- **Repetir la prueba de borrado de organización de §15**, ahora que hay una tabla más en la lista.
+- **Confirmar que la dificultad obligatoria no molesta en el uso diario.** Es un clic más en cada alta, y el formulario rápido existe para anotar algo en dos segundos. Si en la práctica frena, la salida no es ponerle un default —eso rompe el dato— sino recordar el último nivel elegido en ese proyecto.
 
 ---
 

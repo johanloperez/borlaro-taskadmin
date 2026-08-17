@@ -32,9 +32,13 @@
 
 # Cómo se llega desde la red: por IP o por el nombre del equipo, en HTTP plano.
 # `:80` responde a cualquier host, que es lo que hace falta cuando cada máquina entra por una
-# dirección distinta y no hay DNS interno. En un servidor expuesto, poner el dominio real acá
-# activa el TLS automático de Let's Encrypt.
-{$TASKADMIN_DOMAIN::80} {
+# dirección distinta y no hay DNS interno.
+#
+# El `http://` explícito no es decorativo: sin él, al poner un dominio real en TASKADMIN_DOMAIN
+# Caddy activa su HTTPS automático y redirige :80 a https://<dominio>. Detrás del túnel de
+# Cloudflare eso es un bucle — el TLS ya lo termina el borde, la petición vuelve a entrar por
+# el túnel al mismo :80 y se redirige otra vez. Acá el origen habla HTTP plano a propósito.
+http://{$TASKADMIN_DOMAIN}:80 {
 	import taskadmin
 }
 

@@ -266,6 +266,7 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
   const [key, setKey] = useState('')
   const [name, setName] = useState('')
   const [memberIds, setMemberIds] = useState<string[]>([])
+  const [labels, setLabels] = useState({ low: '', medium: '', high: '' })
   const [error, setError] = useState<string | null>(null)
 
   const selected = templates.data?.find((t) => t.id === templateId)
@@ -275,7 +276,18 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
     setError(null)
     try {
       // Quien crea el proyecto queda como líder del lado del servidor; acá se suman los demás.
-      await create.mutateAsync({ key, name, templateId, leadIds: memberIds })
+      await create.mutateAsync({
+        key,
+        name,
+        templateId,
+        leadIds: memberIds,
+        // Vacías es «los nombres por defecto», que se traducen al idioma de cada persona. Solo se
+        // mandan si alguien escribió algo.
+        difficultyLabels:
+          labels.low || labels.medium || labels.high
+            ? { low: labels.low || null, medium: labels.medium || null, high: labels.high || null }
+            : undefined,
+      })
       onDone()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('projects.createFailed'))
@@ -395,6 +407,46 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
           </div>
         </div>
       )}
+
+      {/* Renombrar los tres niveles es opcional y va al final: la mayoría de los proyectos usa los
+          nombres por defecto, y ponerlo arriba sugeriría que hay que decidirlo para poder crear.
+
+          Se cambian las palabras, no la escala: debajo siguen siendo tres, en el mismo orden. Es
+          lo que le permite al agente saber cuál extremo es cuál sin inferirlo, y lo que deja
+          comparar riesgo entre proyectos que no comparten vocabulario. */}
+      <div className="space-y-2 border-t border-line pt-4">
+        <div>
+          <p className="text-sm font-medium">{t('projects.difficultyLabels')}</p>
+          <p className="text-xs text-ink-muted">{t('projects.difficultyLabelsHint')}</p>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(['low', 'medium', 'high'] as const).map((slot) => (
+            <label key={slot} className="text-xs text-ink-muted">
+              <span className="mb-1 block">
+                {slot === 'low'
+                  ? t('difficulty.Baja')
+                  : slot === 'medium'
+                    ? t('difficulty.Media')
+                    : t('difficulty.Alta')}
+              </span>
+              <input
+                value={labels[slot]}
+                onChange={(e) => setLabels((prev) => ({ ...prev, [slot]: e.target.value }))}
+                placeholder={
+                  slot === 'low'
+                    ? t('difficulty.Baja')
+                    : slot === 'medium'
+                      ? t('difficulty.Media')
+                      : t('difficulty.Alta')
+                }
+                className="w-full rounded-md border border-line bg-canvas px-2 py-1.5 text-sm
+                           focus:border-accent focus:outline-none"
+              />
+            </label>
+          ))}
+        </div>
+      </div>
 
       {error && <p className="text-sm text-stage-blocked">{error}</p>}
 

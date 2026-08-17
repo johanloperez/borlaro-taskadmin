@@ -3,12 +3,16 @@ import { api, getAuthToken } from '@/lib/api'
 import type {
   BoardColumn,
   Deliverable,
+  DifficultyLabels,
+  FeedItem,
   ProjectDetail,
   ProjectSummary,
   ReviewStatus,
   TeamMember,
   TemplateSummary,
+  TimeExtension,
   WorkItem,
+  WorkItemDifficulty,
   WorkItemEvent,
   WorkItemPriority,
 } from '@/lib/types'
@@ -22,6 +26,11 @@ export const keys = {
   deliverables: (id: string) => ['deliverables', id] as const,
   users: ['users'] as const,
   mine: ['mine'] as const,
+  extensions: (id: string) => ['extensions', id] as const,
+  feed: ['feed'] as const,
+  feedUnread: ['feed', 'unread'] as const,
+  stageResponsibles: (key: string, stageId: string) =>
+    ['stage-responsibles', key, stageId] as const,
 }
 
 export interface IntakeForm {
@@ -255,6 +264,7 @@ export function useCreateProject() {
       description?: string
       templateId: string
       leadIds?: string[]
+      difficultyLabels?: DifficultyLabels
     }) => api<{ id: string; key: string; name: string }>('/api/projects', { method: 'POST', body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.projects }),
   })
@@ -268,6 +278,8 @@ export function useCreateItem(projectKey: string) {
       type?: string
       priority?: WorkItemPriority
       dueDate?: string | null
+      estimate?: number | null
+      difficulty?: WorkItemDifficulty | null
       customFields?: Record<string, unknown>
     }) => api<WorkItem>(`/api/projects/${projectKey}/items`, { method: 'POST', body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.board(projectKey) }),
@@ -330,4 +342,122 @@ export function useTransitionItem(projectKey: string) {
       qc.invalidateQueries({ queryKey: keys.events(variables.id) })
     },
   })
+}
+
+
+// ── Ampliaciones de tiempo ────────────────────────────────────────────────────
+
+export function useTimeExtensions(itemId: string | null) {
+  return useQuery({
+    queryKey: keys.extensions(itemId ?? ''),
+    queryFn: () => api<TimeExtension[]>(`/api/items/${itemId}/ampliaciones`),
+    enabled: !!itemId,
+  })
+}
+
+export function useVoidExtension(itemId: string, projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ extensionId, reason }: { extensionId: string; reason: string }) =>
+      api<void>(`/api/items/${itemId}/ampliaciones/${extensionId}/anular`, {
+        method: 'POST',
+        body: { reason },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.extensions(itemId) })
+      // El total cambió, así que el tablero y la tarea muestran otro número.
+      qc.invalidateQueries({ queryKey: keys.board(projectKey) })
+      qc.invalidateQueries({ queryKey: keys.events(itemId) })
+    },
+  })
+}
+
+// ── Novedades ─────────────────────────────────────────────────────────────────
+
+export function useFeed(soloNoLeidas = false) {
+  return useQuery({
+    queryKey: [...keys.feed, soloNoLeidas],
+    queryFn: () => api<FeedItem[]>(`/api/novedades?soloNoLeidas=${soloNoLeidas}`),
+  })
+}
+
+export function useFeedUnread() {
+  return useQuery({
+    queryKey: keys.feedUnread,
+    queryFn: () => api<{ count: number }>('/api/novedades/no-leidas'),
+    // El contador se refresca solo: una novedad que aparece cinco minutos tarde en la campana
+    // sigue sirviendo, y un socket para esto no se paga.
+    refetchInterval: 60_000,
+  })
+}
+
+export function useMarkFeedRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string | null) =>
+      api<void>(id ? `/api/novedades/${id}/leida` : '/api/novedades/leidas', { method: 'POST' }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.feed })
+    },
+  })
+}
+
+/** Renombra los tres niveles de un proyecto. Cambia las palabras, no la escala. */
+export function useSetDifficultyLabels(projectKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (labels: DifficultyLabels) =>
+      api<DifficultyLabels>(`/api/projects/${projectKey}/dificultad`, { method: 'PUT', body: labels }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.project(projectKey) })
+      // El tablero dibuja las etiquetas en el formulario de alta, así que también se rehace.
+      qc.invalidateQueries({ queryKey: keys.board(projectKey) })
+    },
+  })
+}
+
+// ── Responsables de una etapa ─────────────────────────────────────────────────
+//
+// La lista es lo que reparte trabajo hoy: cuando una tarea llega a la etapa, se elige de acá al
+// de menos carga. El titular único (`stage.defaultAssigneeId`) sigue funcionando para lo que se
+// configuró antes de que la lista existiera, pero ya no se edita desde ningún lado — ver §12.
+
+export function useStageResponsibles(projectKey: string, stageId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.stageResponsibles(projectKey, stageId),
+    queryFn: () =>
+      api<{ userId: string; name: string; order: number }[]>(
+        `/api/projects/${projectKey}/stages/${stageId}/responsables`,
+      ),
+    enabled,
+  })
+}
+
+export function useStageResponsibleMutation(projectKey: string, stageId: string) {
+  const qc = useQueryClient()
+
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: keys.stageResponsibles(projectKey, stageId) })
+    // El tablero muestra quién atiende cada columna, así que también se rehace.
+    void qc.invalidateQueries({ queryKey: keys.board(projectKey) })
+  }
+
+  const add = useMutation({
+    mutationFn: (userId: string) =>
+      api<void>(`/api/projects/${projectKey}/stages/${stageId}/responsables`, {
+        method: 'POST',
+        body: { userId },
+      }),
+    onSuccess: invalidate,
+  })
+
+  const remove = useMutation({
+    mutationFn: (userId: string) =>
+      api<void>(`/api/projects/${projectKey}/stages/${stageId}/responsables/${userId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: invalidate,
+  })
+
+  return { add, remove }
 }

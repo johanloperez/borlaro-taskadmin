@@ -26,6 +26,10 @@ export interface CurrentUser {
   organizationName: string | null
   /** Para pedir el logo de la organización al servidor. */
   organizationId: string
+  /** Los permisos por persona. La interfaz los usa para no dibujar controles que darían 403. */
+  canAssignTasks: boolean
+  canSetDueDate: boolean
+  canCreateTasks: boolean
   /** Ruta del logo en el almacenamiento. Null = no cargó logo. */
   logoPath: string | null
 }

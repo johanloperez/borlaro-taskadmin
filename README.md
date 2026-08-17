@@ -1,4 +1,4 @@
-# TaskAdmin
+# Borlaro TMS
 
 Gestión de trabajo para equipos de cualquier disciplina —desarrollo, diseño, edición de video,
 contenido, operaciones— con un **agente de IA que conversa cada día con cada persona**, le
@@ -54,7 +54,7 @@ y [§9 del plan](docs/PLAN.md).
 | Miembros de proyecto (al crear y después) | ✅ probado en navegador |
 | Sección de Configuración para el admin | ✅ probado, aplica en caliente |
 | Mensajes directos con entrega por escritorio/email | ✅ probado |
-| Las 9 herramientas del agente contra el dominio | ✅ probado |
+| Las 10 herramientas del agente contra el dominio | ✅ probado (9; `add_time_estimate` sin probar) |
 | Bucle de conversación con tope de turnos y transcript | ✅ probado |
 | Cola de aprobaciones (fecha y trabajo nuevo) | ✅ probado en navegador |
 | UI de chat en React (`/agent-chat`, `/checkin/:id`) | ✅ probado en navegador |
@@ -62,6 +62,11 @@ y [§9 del plan](docs/PLAN.md).
 | Aviso al escritorio por SignalR, con acuse de la app | ✅ probado de punta a punta |
 | Tablero en tiempo real (sin refrescar) | ✅ probado en navegador |
 | Relevo: responsable por etapa y aviso al recibir | ✅ probado de punta a punta |
+| Varios responsables por etapa, con reparto por menor carga | ⚠️ desplegado con interfaz; sin probar en uso — [§12](docs/PLAN.md) |
+| Archivar proyectos, con deshacer | ✅ construido — [§17](docs/PLAN.md) |
+| Estimación original + ampliaciones anulables, dificultad, `add_time_estimate` | ⚠️ desplegado y migrado; sin probar en uso — [§19](docs/PLAN.md) |
+| Novedades del líder: `/novedades`, campana y las 6 clases de aviso | ⚠️ desplegado; sin probar en uso — [§19](docs/PLAN.md) |
+| Permisos por persona: asignar, fijar fechas, crear tareas | ⚠️ desplegado; sin probar en uso — [§19](docs/PLAN.md) |
 | Nombre y logo de la organización en la sesión | ✅ |
 | Manual para quien usa la plataforma, servido en `/manual` | ✅ probado |
 | Conversación contra Claude (`ANTHROPIC_API_KEY`) | ⚠️ sin clave, sin probar |
@@ -95,11 +100,11 @@ peldaño y el número de intentos no se mueven.
 Para probar la escalera comprimida en segundos en vez de horas:
 
 ```bash
-Notifications__SweepIntervalSeconds=3 Notifications__SecondToastAfterMinutes=0 Notifications__FirstEmailAfterMinutes=0 Notifications__SecondEmailAfterMinutes=0 Notifications__MarkMissedAfterMinutes=0 dotnet run --project src/TaskAdmin.Api
+Notifications__SweepIntervalSeconds=3 Notifications__SecondToastAfterMinutes=0 Notifications__FirstEmailAfterMinutes=0 Notifications__SecondEmailAfterMinutes=0 Notifications__MarkMissedAfterMinutes=0 dotnet run --project src/Borlaro.Tms.Api
 ```
 
 Sin `Email:SmtpHost` configurado, los correos se escriben como archivos `.eml` en
-`src/TaskAdmin.Api/outbox/`, así se puede probar la escalera sin montar un SMTP ni mandarle
+`src/Borlaro.Tms.Api/outbox/`, así se puede probar la escalera sin montar un SMTP ni mandarle
 correo de verdad a nadie.
 
 El agente está probado en el ciclo que importa: el scheduler crea el check-in a la hora local,
@@ -136,7 +141,7 @@ compose ya declara `host.docker.internal` como `host-gateway` para que funcione 
 y el error de conexión lo dice explícitamente en vez de devolver un timeout pelado.
 
 **Ojo con el contexto:** los modelos de Ollama sin `num_ctx` definido usan **4096 tokens**, y el
-prompt del agente —sistema, nueve herramientas y el tablero de la persona— lo supera. Con el
+prompt del agente —sistema, diez herramientas y el tablero de la persona— lo supera. Con el
 contexto corto el modelo pierde las definiciones de herramientas y deja de llamarlas, sin ningún
 error visible. Conviene una variante con contexto declarado (`…-32k`).
 
@@ -193,7 +198,7 @@ el selector del encabezado, también en las pantallas públicas. La elección se
 así que viaja entre dispositivos y determina además en qué idioma llegan los emails.
 
 Las traducciones son diccionarios en código: `web/src/locales/{en,es,pt}.ts` para la interfaz y
-[Messages.cs](src/TaskAdmin.Api/Localization/Messages.cs) para el servidor. El **inglés** es el
+[Messages.cs](src/Borlaro.Tms.Api/Localization/Messages.cs) para el servidor. El **inglés** es el
 idioma de reserva y el diccionario de referencia: los otros dos se tipan contra él, así que **una
 traducción que falta no compila**. Agregar un idioma es agregar un archivo.
 
@@ -465,7 +470,7 @@ Tres cosas cambiaron para que eso no pueda volver a verse como «no anda»:
   contraseña**, porque el problema no es de identidad.
 - **Un error de arranque se cuenta.** `OnStartup` es `async void`: lo que se escapara después del
   primer `await` terminaba el proceso antes de mostrar ventana alguna. Hay manejadores globales,
-  y el detalle queda en `%APPDATA%\TaskAdmin\errores.log`.
+  y el detalle queda en `%APPDATA%\Borlaro TMS\errores.log`.
 
 **Ojo con `localhost`:** Caddy le saca certificado y redirige a HTTPS, y el WebView2 corta por
 certificado. Usá el nombre o la IP con la que se publica la instalación.
@@ -480,7 +485,7 @@ era informativo: contaba que algo pasó y dejaba a la persona buscándolo a mano
 - **La app de escritorio sigue sin probarse con interfaz gráfica.** Compila y la lógica de
   ingreso, sesión persistente y navegación está escrita, pero no hay forma de verificar ventana,
   bandeja, globos ni WebView2 desde esta máquina sin sesión gráfica. Es lo primero a probar a
-  mano: `dotnet run --project src/TaskAdmin.Desktop`.
+  mano: `dotnet run --project src/Borlaro.Tms.Desktop`.
 - **Falta el canal de Slack** (Fase 4b), la alternativa al escritorio para quien no puede
   instalar software o no usa Windows.
 
@@ -528,11 +533,11 @@ se construyen adentro. .NET SDK 8 y Node 20+ solo hacen falta para iterar sobre 
 
 ```
 src/
-  TaskAdmin.Domain/          Entidades y reglas. Sin dependencias de infraestructura.
-  TaskAdmin.Infrastructure/  EF Core, DbContext, migraciones, seed.
-  TaskAdmin.Agent/           Integración con la API de Anthropic (SDK oficial de C#).
-  TaskAdmin.Api/             ASP.NET Core: REST, auth, SignalR.
-  TaskAdmin.Desktop/         App WPF de bandeja. Se distribuye aparte, no va en ninguna imagen.
+  Borlaro.Tms.Domain/          Entidades y reglas. Sin dependencias de infraestructura.
+  Borlaro.Tms.Infrastructure/  EF Core, DbContext, migraciones, seed.
+  Borlaro.Tms.Agent/           Integración con la API de Anthropic (SDK oficial de C#).
+  Borlaro.Tms.Api/             ASP.NET Core: REST, auth, SignalR.
+  Borlaro.Tms.Desktop/         App WPF de bandeja. Se distribuye aparte, no va en ninguna imagen.
 deploy/Caddyfile             Reverse proxy y TLS automático.
 deploy/web.Dockerfile        Compila el frontend y lo hornea en la imagen de Caddy.
 docker-compose.yml           postgres + api + web (Caddy).
@@ -573,7 +578,7 @@ Para la red local hace falta además abrir el puerto en Windows Firewall (PowerS
 administrador):
 
 ```powershell
-New-NetFirewallRule -DisplayName "TaskAdmin HTTP" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
+New-NetFirewallRule -DisplayName "Borlaro TMS HTTP" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
 ```
 
 Al arrancar, la API aplica las migraciones, siembra las plantillas y crea el primer admin.
@@ -659,7 +664,7 @@ salen los enlaces de verificación de los emails.
 powershell -ExecutionPolicy Bypass -File deploy\instalar-servidor-casero.ps1
 ```
 
-Deja un respaldo diario a las 03:00 en `C:\Respaldos\TaskAdmin` (volcado de Postgres en formato
+Deja un respaldo diario a las 03:00 en `C:\Respaldos\Borlaro TMS` (volcado de Postgres en formato
 `custom` más un `.tar.gz` de los archivos subidos, reteniendo 14 días y **verificando** que el tar
 se pueda leer), apaga la suspensión y la hibernación, evita que cerrar la tapa mate el servicio, y
 pone a Docker Desktop a arrancar con la sesión.
@@ -711,13 +716,13 @@ npm run dev --prefix web
 
 Frontend en `http://localhost:5173` con proxy de `/api` y `/hubs`; Swagger en
 `http://localhost:5102/swagger`. Para tocar el backend, `docker compose stop api` y correrlo
-desde el SDK con `dotnet run --project src/TaskAdmin.Api --launch-profile http`.
+desde el SDK con `dotnet run --project src/Borlaro.Tms.Api --launch-profile http`.
 
 Corriendo la API fuera de Docker, los secretos van en user-secrets y no en `appsettings.json`,
 que está versionado:
 
 ```bash
-dotnet user-secrets --project src/TaskAdmin.Api set "Jwt:SigningKey" "<clave de 32+ caracteres>"
+dotnet user-secrets --project src/Borlaro.Tms.Api set "Jwt:SigningKey" "<clave de 32+ caracteres>"
 ```
 
 El primer administrador se crea solo si no hay ningún usuario y están definidos
@@ -728,10 +733,10 @@ configuración la app arranca, avisa en el log y queda inaccesible, que es prefe
 ## Migraciones
 
 ```bash
-dotnet dotnet-ef migrations add <Nombre> --project src/TaskAdmin.Infrastructure --startup-project src/TaskAdmin.Infrastructure --output-dir Migrations
+dotnet dotnet-ef migrations add <Nombre> --project src/Borlaro.Tms.Infrastructure --startup-project src/Borlaro.Tms.Infrastructure --output-dir Migrations
 ```
 
-La fábrica de diseño (`TaskAdminDbContextFactory`) permite generar migraciones sin la API
+La fábrica de diseño (`BorlaroTmsDbContextFactory`) permite generar migraciones sin la API
 levantada ni Postgres corriendo.
 
 ## Decisiones que conviene conocer antes de tocar el código

@@ -27,7 +27,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/TaskAdmin.Api/Dockerfile
+      dockerfile: src/Borlaro.Tms.Api/Dockerfile
     container_name: taskadmin-api
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}

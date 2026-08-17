@@ -223,6 +223,36 @@ function UserRow({ user }: { user: AdminUser }) {
             {t('people.receivesCheckIn')}
           </label>
 
+          {/* Los tres permisos por persona. Se comprueban además del permiso sobre el proyecto:
+              encenderlos no mete a nadie en un tablero ajeno, solo deciden qué puede hacer ahí
+              donde ya entra. Nacen encendidos porque son restricciones, no concesiones — y por eso
+              se apagan acá, de a uno, cuando alguien lo decide.
+
+              Están en esta pantalla y no en una aparte porque un permiso que nadie encuentra es
+              igual a uno que no existe. */}
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-ink-muted">{t('users.permissions')}</p>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {(
+                [
+                  ['canCreateTasks', 'users.canCreateTasks'],
+                  ['canAssignTasks', 'users.canAssignTasks'],
+                  ['canSetDueDate', 'users.canSetDueDate'],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={user[key]}
+                    onChange={(e) => run(edit.mutateAsync({ id: user.id, [key]: e.target.checked }))}
+                  />
+                  {t(label)}
+                </label>
+              ))}
+            </div>
+          </div>
+
           {/* Los tres controles en una sola fila y con la misma altura: el texto de ayuda va
               debajo, no adentro, porque si crece empuja a uno solo y desalinea la fila. */}
           <div className="space-y-1">

@@ -1,4 +1,4 @@
-# Respaldo diario de TaskAdmin: la base y los archivos subidos.
+# Respaldo diario de Borlaro TMS: la base y los archivos subidos.
 #
 # Son dos cosas distintas y las dos hacen falta. La base sin los entregables deja tarjetas que
 # apuntan a archivos que no existen; los archivos sin la base son una carpeta de nombres sueltos.
@@ -15,6 +15,8 @@
 # Devuelve codigo distinto de cero si algo fallo, para que el Programador de tareas lo marque
 # como error en vez de mostrar un exito silencioso sobre un respaldo vacio.
 
+# $Destino conserva el nombre viejo a proposito: es la carpeta donde ya se vienen acumulando los
+# respaldos en la maquina. Cambiarla arrancaria una serie nueva y dejaria la vieja sin rotar.
 [CmdletBinding()]
 param(
     [string]$Destino = "C:\Respaldos\TaskAdmin",

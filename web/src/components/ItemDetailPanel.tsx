@@ -2,11 +2,29 @@ import { useEffect, useState } from 'react'
 import { Bot, X, Loader2, Trash2 } from 'lucide-react'
 import { CustomFieldInput } from '@/components/CustomFieldInput'
 import { DeliverablesSection } from '@/components/DeliverablesSection'
-import { useDeleteItem, useItemEvents, useTeam, useTransitionItem, useUpdateItem } from '@/lib/queries'
-import { priorityLabel, stageDot, type ProjectDetail, type WorkItem, type WorkItemPriority } from '@/lib/types'
+import {
+  useDeleteItem,
+  useItemEvents,
+  useTeam,
+  useTimeExtensions,
+  useTransitionItem,
+  useUpdateItem,
+  useVoidExtension,
+} from '@/lib/queries'
+import {
+  difficultyLabel,
+  priorityLabel,
+  stageDot,
+  type ProjectDetail,
+  type TimeExtension,
+  type WorkItem,
+  type WorkItemDifficulty,
+  type WorkItemPriority,
+} from '@/lib/types'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { useT, type Translate } from '@/lib/i18n'
+import { useAuth } from '@/stores/auth'
 
 export function ItemDetailPanel({
   item,
@@ -18,11 +36,19 @@ export function ItemDetailPanel({
   onClose: () => void
 }) {
   const t = useT()
+  const user = useAuth((s) => s.user)
   const update = useUpdateItem(project.key)
   const transition = useTransitionItem(project.key)
   const events = useItemEvents(item.id)
   const team = useTeam()
   const remove = useDeleteItem(project.key)
+  const extensions = useTimeExtensions(item.id)
+  const voidExtension = useVoidExtension(item.id, project.key)
+
+  // La estimación original se congela cuando la tarea arranca (§19): con avance o con alguna
+  // ampliación, bajarla haría entrar el trabajo en lo estimado retroactivamente.
+  const estimateLocked = item.addedHours > 0 || item.progressPct > 0
+  const canSetDueDate = user?.canSetDueDate !== false
 
   const nameOf = (id: string | null) =>
     (id && team.data?.find((p) => p.id === id)?.name) || t('item.someone')
@@ -30,6 +56,9 @@ export function ItemDetailPanel({
   const [title, setTitle] = useState(item.title)
   const [priority, setPriority] = useState<WorkItemPriority>(item.priority)
   const [progress, setProgress] = useState(item.progressPct)
+  const [difficulty, setDifficulty] = useState<WorkItemDifficulty>(item.difficulty)
+  const [dueDate, setDueDate] = useState(item.dueDate ?? '')
+  const [estimate, setEstimate] = useState(item.estimate === null ? '' : String(item.estimate))
   const [fields, setFields] = useState<Record<string, unknown>>(item.customFields ?? {})
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -39,6 +68,9 @@ export function ItemDetailPanel({
     setTitle(item.title)
     setPriority(item.priority)
     setProgress(item.progressPct)
+    setDifficulty(item.difficulty)
+    setDueDate(item.dueDate ?? '')
+    setEstimate(item.estimate === null ? '' : String(item.estimate))
     setFields(item.customFields ?? {})
     setError(null)
     setConfirmingDelete(false)
@@ -56,6 +88,11 @@ export function ItemDetailPanel({
         id: item.id,
         title,
         priority,
+        difficulty,
+        // Vacío no se manda: el backend rechaza un campo presente en nulo, y «lo dejé como
+        // estaba» no es lo mismo que «lo borré».
+        dueDate: dueDate || undefined,
+        estimate: estimate === '' ? undefined : Number(estimate),
         progressPct: progress,
         customFields: clean,
       })
@@ -67,6 +104,9 @@ export function ItemDetailPanel({
   const dirty =
     title !== item.title ||
     priority !== item.priority ||
+    difficulty !== item.difficulty ||
+    dueDate !== (item.dueDate ?? '') ||
+    estimate !== (item.estimate === null ? '' : String(item.estimate)) ||
     progress !== item.progressPct ||
     JSON.stringify(fields) !== JSON.stringify(item.customFields ?? {})
 
@@ -236,6 +276,62 @@ export function ItemDetailPanel({
             </select>
           </div>
 
+          {/* Fecha, horas y dificultad se editan acá porque acá es donde se mira una tarea. Que
+              la API los aceptara sin que ninguna pantalla los mostrara fue el caso que hizo la
+              regla: lógica en el backend que el front no usa es lógica que no existe. */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-ink-muted">{t('item.dueDate')}</label>
+            <input
+              type="date"
+              value={dueDate}
+              disabled={!canSetDueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm
+                         focus:border-accent focus:outline-none disabled:opacity-60"
+            />
+            {!canSetDueDate && (
+              <span className="block text-[11px] text-ink-subtle">{t('item.noDatePermission')}</span>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-ink-muted">{t('item.estimate')}</label>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={estimate}
+              disabled={estimateLocked}
+              onChange={(e) => setEstimate(e.target.value)}
+              placeholder="—"
+              className="w-full rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm
+                         focus:border-accent focus:outline-none disabled:opacity-60"
+            />
+            {estimateLocked && (
+              <span className="block text-[11px] text-ink-subtle">{t('item.estimateLocked')}</span>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-ink-muted">
+              {t('item.difficultyChange')}
+            </label>
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as WorkItemDifficulty)}
+              className="w-full rounded-lg border border-line bg-canvas px-2.5 py-1.5 text-sm
+                         focus:border-accent focus:outline-none"
+            >
+              {(['Baja', 'Media', 'Alta'] as const).map((level) => (
+                <option key={level} value={level}>
+                  {difficultyLabel(level, project.difficultyLabels, (l) =>
+                    t(`difficulty.${l}` as const),
+                  )}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-ink-muted">
               {t('item.progress', { value: progress })}
@@ -251,6 +347,14 @@ export function ItemDetailPanel({
             />
           </div>
         </div>
+
+        <TimeSection
+          item={item}
+          extensions={extensions.data ?? []}
+          canVoid={project.permissions.canAssign}
+          onVoid={(extensionId, reason) => voidExtension.mutateAsync({ extensionId, reason })}
+          t={t}
+        />
 
         {project.customFields.length > 0 && (
           <div className="space-y-3 border-t border-line pt-4">
@@ -402,4 +506,122 @@ function describeEvent(
     })
   }
   return t('item.ev.field', { field })
+}
+
+/** Lo que la tarea iba a costar, lo que se le fue agregando, y quién lo agregó.
+ *
+ *  Se muestran las tres cifras por separado —original, agregado, total— y no solo el total: el
+ *  total dice cuánto cuesta, y la diferencia entre original y total dice cuánto se subestimó, que
+ *  es la información por la que existe todo este mecanismo.
+ *
+ *  Las ampliaciones anuladas se siguen mostrando, tachadas. Esconderlas dejaría el panel contando
+ *  una versión prolija de algo que no pasó así, y además el agente escribe estas filas solo: ver
+ *  que una se anuló es cómo alguien se entera de que el agente se equivocó. */
+function TimeSection({
+  item,
+  extensions,
+  canVoid,
+  onVoid,
+  t,
+}: {
+  item: WorkItem
+  extensions: TimeExtension[]
+  canVoid: boolean
+  onVoid: (extensionId: string, reason: string) => Promise<unknown>
+  t: Translate
+}) {
+  const [error, setError] = useState<string | null>(null)
+
+  const total = (item.estimate ?? 0) + item.addedHours
+  const hours = (value: number) => t('item.hoursShort', { value: String(value) })
+
+  async function handleVoid(extensionId: string) {
+    const reason = window.prompt(t('item.voidPrompt'))
+    if (!reason?.trim()) return
+
+    setError(null)
+    try {
+      await onVoid(extensionId, reason.trim())
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t('item.voidFailed'))
+    }
+  }
+
+  return (
+    <div className="space-y-3 border-t border-line pt-4">
+      <div className="flex flex-wrap gap-4">
+        <div>
+          <p className="text-[11px] text-ink-subtle">{t('item.estimate')}</p>
+          <p className="text-sm font-medium">
+            {item.estimate === null ? '—' : hours(item.estimate)}
+          </p>
+        </div>
+
+        {item.addedHours > 0 && (
+          <>
+            <div>
+              <p className="text-[11px] text-ink-subtle">{t('item.addedHours')}</p>
+              <p className="text-sm font-medium text-stage-blocked">+{hours(item.addedHours)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-ink-subtle">{t('item.totalHours')}</p>
+              <p className="text-sm font-medium">{hours(total)}</p>
+            </div>
+          </>
+        )}
+
+      </div>
+
+      {item.estimate !== null && (item.addedHours > 0 || item.progressPct > 0) && (
+        <p className="text-[11px] text-ink-subtle">{t('item.estimateLocked')}</p>
+      )}
+
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-ink-muted">{t('item.extensions')}</p>
+
+        {extensions.length === 0 ? (
+          <p className="text-xs text-ink-subtle">{t('item.extensionsEmpty')}</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {extensions.map((e) => (
+              <li key={e.id} className="text-xs">
+                <div className={cn('flex items-start gap-2', e.voidedAt && 'opacity-60')}>
+                  <span className={cn('flex-1', e.voidedAt && 'line-through')}>
+                    <span className="font-medium">
+                      {t('item.extensionBy', {
+                        who: e.actorType === 'Agent' ? t('item.agent') : (e.actorName ?? t('item.someone')),
+                        hours: String(e.hours),
+                      })}
+                    </span>
+                    {e.reason && <span className="text-ink-subtle"> — {e.reason}</span>}
+                  </span>
+
+                  {canVoid && !e.voidedAt && (
+                    <button
+                      type="button"
+                      onClick={() => handleVoid(e.id)}
+                      className="shrink-0 text-[11px] text-ink-subtle underline hover:text-ink"
+                    >
+                      {t('item.void')}
+                    </button>
+                  )}
+                </div>
+
+                {e.voidedAt && (
+                  <p className="text-[11px] text-ink-subtle">
+                    {t('item.extensionVoided', {
+                      who: e.voidedByName ?? t('item.someone'),
+                      reason: e.voidReason ?? '',
+                    })}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {error && <p className="text-xs text-stage-blocked">{error}</p>}
+    </div>
+  )
 }

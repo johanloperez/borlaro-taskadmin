@@ -483,9 +483,14 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# TaskAdmin
+# Borlaro TMS
 .env
 web/dist/
 web/node_modules/
 uploads/
 .admin-credentials.txt
+
+# Copias del .env: llevan las mismas claves y no van al repositorio.
+.env.bak
+.env.*.bak
+*.env.bak
