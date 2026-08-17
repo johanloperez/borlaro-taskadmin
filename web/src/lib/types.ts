@@ -295,3 +295,14 @@ export function difficultyLabel(
 
   return custom?.trim() || fallback(level)
 }
+
+/** Un archivo que acompaña al enunciado de una tarea: el brief, una captura, las especificaciones.
+ *  Distinto de un entregable: el adjunto es lo que entra a la tarea, el entregable lo que sale. */
+export interface Attachment {
+  id: string
+  name: string
+  contentType: string | null
+  sizeBytes: number
+  createdAt: string
+  uploadedByName: string | null
+}

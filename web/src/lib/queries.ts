@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, getAuthToken } from '@/lib/api'
+import { api, apiForm, getAuthToken } from '@/lib/api'
 import type {
+  Attachment,
   BoardColumn,
   Deliverable,
   DifficultyLabels,
@@ -27,6 +28,7 @@ export const keys = {
   users: ['users'] as const,
   mine: ['mine'] as const,
   extensions: (id: string) => ['extensions', id] as const,
+  attachments: (id: string) => ['attachments', id] as const,
   feed: ['feed'] as const,
   feedUnread: ['feed', 'unread'] as const,
   stageResponsibles: (key: string, stageId: string) =>
@@ -276,6 +278,7 @@ export function useCreateItem(projectKey: string) {
     mutationFn: (body: {
       title: string
       type?: string
+      descriptionMd?: string
       priority?: WorkItemPriority
       dueDate?: string | null
       estimate?: number | null
@@ -460,4 +463,43 @@ export function useStageResponsibleMutation(projectKey: string, stageId: string)
   })
 
   return { add, remove }
+}
+
+// ── Adjuntos ──────────────────────────────────────────────────────────────────
+
+export function useAttachments(itemId: string | null) {
+  return useQuery({
+    queryKey: keys.attachments(itemId ?? ''),
+    queryFn: () => api<Attachment[]>(`/api/items/${itemId}/adjuntos`),
+    enabled: !!itemId,
+  })
+}
+
+/** Sube un archivo. Usa `apiForm` y no `api`: el segundo serializa JSON, y acá hace falta
+ *  multipart con el boundary que arma el navegador. */
+export async function uploadAttachment(itemId: string, file: File) {
+  const form = new FormData()
+  form.append('file', file)
+
+  return apiForm<{ id: string; name: string; sizeBytes: number }>(
+    `/api/items/${itemId}/adjuntos`,
+    form,
+  )
+}
+
+export function useUploadAttachment(itemId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => uploadAttachment(itemId, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.attachments(itemId) }),
+  })
+}
+
+export function useDeleteAttachment(itemId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (attachmentId: string) =>
+      api<void>(`/api/items/${itemId}/adjuntos/${attachmentId}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.attachments(itemId) }),
+  })
 }

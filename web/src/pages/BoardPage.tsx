@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
-import { AlertTriangle, Loader2, Plus, Share2, UserCog, UserPlus, X } from 'lucide-react'
+import { AlertTriangle, Loader2, Maximize2, Plus, Share2, UserCog, UserPlus, X } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { CustomFieldInput } from '@/components/CustomFieldInput'
 import { ItemDetailPanel } from '@/components/ItemDetailPanel'
@@ -28,6 +28,7 @@ import {
   useTransitionItem,
 } from '@/lib/queries'
 import { ApiError } from '@/lib/api'
+import { CreateItemDialog } from '@/components/CreateItemDialog'
 import { useBoardRealtime } from '@/lib/realtime'
 import {
   difficultyLabel,
@@ -71,6 +72,7 @@ export function BoardPage() {
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('item'))
   const [notice, setNotice] = useState<string | null>(null)
   const [blockerPrompt, setBlockerPrompt] = useState<{ item: WorkItem; stage: Stage } | null>(null)
+  const [fullCreate, setFullCreate] = useState(false)
   const [adding, setAdding] = useState(false)
 
   const sensors = useSensors(
@@ -243,6 +245,10 @@ export function BoardPage() {
 
           {adding && (
             <NewItemForm
+              onExpand={() => {
+                setAdding(false)
+                setFullCreate(true)
+              }}
               projectKey={p.key}
               types={p.workItemTypes}
               fields={p.customFields}
@@ -293,6 +299,20 @@ export function BoardPage() {
           />
         )}
       </div>
+
+      {fullCreate && (
+        <CreateItemDialog
+          projectKey={p.key}
+          types={p.workItemTypes}
+          fields={p.customFields}
+          labels={p.difficultyLabels}
+          onDone={() => setFullCreate(false)}
+          onCreated={(id) => {
+            setFullCreate(false)
+            setSelectedId(id)
+          }}
+        />
+      )}
 
       {blockerPrompt && (
         <BlockerDialog
@@ -722,12 +742,16 @@ function NewItemForm({
   fields,
   labels,
   onDone,
+  onExpand,
 }: {
   projectKey: string
   types: string[]
   fields: CustomFieldDef[]
   labels: DifficultyLabels
   onDone: () => void
+  /** Pasar al alta completa, con descripción y adjuntos. Lo que ya se escribió no se arrastra:
+   *  el título de dos palabras del alta rápida rara vez es el que uno quiere en un brief. */
+  onExpand: () => void
 }) {
   const t = useT()
   const create = useCreateItem(projectKey)
@@ -800,6 +824,15 @@ function NewItemForm({
       >
         {t('board.newCreate')}
       </button>
+      <button
+        type="button"
+        onClick={onExpand}
+        title={t('board.expandCreate')}
+        className="rounded-md px-2 py-1.5 text-sm text-ink-muted hover:text-ink"
+      >
+        <Maximize2 className="size-4" />
+      </button>
+
       <button type="button" onClick={onDone} className="rounded-md px-2 py-1.5 text-sm text-ink-muted">
         <X className="size-4" />
       </button>

@@ -31,6 +31,7 @@ public class BorlaroTmsDbContext : DbContext
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<WorkItemStageAssignment> WorkItemStageAssignments => Set<WorkItemStageAssignment>();
     public DbSet<WorkItemTimeExtension> WorkItemTimeExtensions => Set<WorkItemTimeExtension>();
+    public DbSet<WorkItemAttachment> WorkItemAttachments => Set<WorkItemAttachment>();
     public DbSet<Label> Labels => Set<Label>();
     public DbSet<WorkItemLabel> WorkItemLabels => Set<WorkItemLabel>();
     public DbSet<WorkItemComment> WorkItemComments => Set<WorkItemComment>();
@@ -235,6 +236,13 @@ public class BorlaroTmsDbContext : DbContext
         });
 
         // ── Work items ───────────────────────────────────────────────────────────
+        b.Entity<WorkItemAttachment>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(300).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(150);
+            e.HasIndex(x => x.WorkItemId);
+        });
+
         b.Entity<WorkItemTimeExtension>(e =>
         {
             e.Property(x => x.Hours).HasPrecision(10, 2);
@@ -253,6 +261,9 @@ public class BorlaroTmsDbContext : DbContext
             e.Property(x => x.AddedHours).HasPrecision(10, 2);
 
             e.HasMany(x => x.TimeExtensions).WithOne(x => x.WorkItem)
+                .HasForeignKey(x => x.WorkItemId).OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(x => x.Attachments).WithOne(x => x.WorkItem)
                 .HasForeignKey(x => x.WorkItemId).OnDelete(DeleteBehavior.Cascade);
             e.Property(x => x.SubmitterName).HasMaxLength(200);
             e.Property(x => x.SubmitterEmail).HasMaxLength(320);

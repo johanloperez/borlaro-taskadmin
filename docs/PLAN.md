@@ -950,7 +950,21 @@ Es el tercer caso del mismo patrón, después de la fecha de entrega y la estima
 
 **La decisión que importa: se renderiza con `react-markdown`, no con un renderizador propio.** Escribir uno a mano termina indefectiblemente en `dangerouslySetInnerHTML`, y ahí cualquiera que cree una tarea ejecuta código en la pantalla de quien la lea. `react-markdown` ignora el HTML crudo por defecto y **`rehype-raw` no se habilita** — si alguien lo agrega alguna vez, está reabriendo exactamente ese agujero. Todo vive en `web/src/components/Markdown.tsx` para que la decisión se revise en un solo archivo.
 
-**Dónde está y dónde no.** En el panel de detalle, debajo del título, con alternancia entre editar y vista previa. **No** en el formulario rápido de creación: ese existe para anotar algo en dos segundos desde la columna, y un área de ocho líneas lo convierte en un trámite —el mismo criterio por el que ahí tampoco están los campos personalizados no obligatorios—.
+**Dónde está.** En el panel de detalle, y en el **alta completa**: un modal grande con el enunciado a la izquierda y los datos a la derecha. El alta rápida en línea no se reemplazó —anotar algo en dos segundos desde la columna es un caso real y distinto de sentarse a redactar un brief— y tiene un botón que pasa al formulario completo. Es la misma división que hacen Linear y GitHub.
+
+**Modal y no pantalla propia**: crear una tarea es una sub-acción de estar mirando el tablero. Se quiere volver exactamente a donde se estaba y ver alrededor mientras se escribe; un takeover pierde ese contexto y obliga a navegar de vuelta.
+
+### Adjuntos: lo que entra, no lo que sale
+
+`WorkItemAttachments` es **deliberadamente distinto de `Deliverable`**, y la diferencia no es técnica sino de significado: **el adjunto es lo que ENTRA a la tarea —el brief, una captura, el PDF con las especificaciones— y el entregable lo que SALE**. Un brief no se versiona ni se aprueba ni abre rondas de revisión. Meterlo en `Deliverable` haría que cada documento de referencia apareciera como algo pendiente de aprobar, y el ciclo de revisión —que es una de las funciones que el producto vende— dejaría de significar lo que significa.
+
+Por eso acá no hay versiones: si el brief cambia, se sube otro archivo. Lo que necesita historia es lo que se entrega, no lo que se pidió.
+
+**Adjuntar es el mismo permiso que editar la tarea**, no uno nuevo: quien no puede reescribir el enunciado tampoco puede cambiar lo que lo explica. El nombre del archivo que manda el cliente nunca toca el disco —lo guarda `IFileStore` con un nombre generado— y queda solo como metadato, así un `..\..\web.config` no escribe nada.
+
+**En el alta, los archivos se eligen antes y se suben apenas la tarea existe**, en la misma acción. Un archivo no puede colgar de una tarea que todavía no existe, y la alternativa —un almacén temporal— ya mostró su costo con los logos huérfanos de §14: caminos donde el archivo queda escrito y la fila no se crea, cada uno con su limpieza. Si un archivo falla, la tarea ya está creada y el mensaje dice cuál faltó, en vez de perder todo lo escrito.
+
+Se borran de la base primero y del disco después: al revés, un borrado que fallara dejaría una fila apuntando a un archivo que ya no está. Y sus rutas entran en la limpieza de archivos al borrar una organización (§15), que si no dejaría huérfanos en disco.
 
 La descripción se manda **solo si cambió**: el servidor registra «descripción actualizada» ante cualquier valor que reciba, y mandarla siempre ensuciaba el historial en cada guardado de título.
 

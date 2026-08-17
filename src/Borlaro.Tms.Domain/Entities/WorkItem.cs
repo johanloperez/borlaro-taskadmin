@@ -97,6 +97,8 @@ public class WorkItem : IOrganizationScoped
 
     public ICollection<WorkItemTimeExtension> TimeExtensions { get; set; } = new List<WorkItemTimeExtension>();
 
+    public ICollection<WorkItemAttachment> Attachments { get; set; } = new List<WorkItemAttachment>();
+
     public int ProgressPct { get; set; }
     public DateOnly? DueDate { get; set; }
 
@@ -136,6 +138,41 @@ public class WorkItem : IOrganizationScoped
     public ICollection<RepoLink> RepoLinks { get; set; } = new List<RepoLink>();
 
     public string ReadableId(string projectKey) => $"{projectKey}-{Number}";
+}
+
+/// <summary>Un archivo que acompaña al enunciado de una tarea: el brief, una captura, el PDF con
+/// las especificaciones.
+///
+/// **Es deliberadamente distinto de `Deliverable`, y la diferencia no es técnica sino de
+/// significado: el adjunto es lo que ENTRA a la tarea y el entregable lo que SALE.** Un brief no
+/// se versiona ni se aprueba ni abre rondas de revisión; meterlo en `Deliverable` haría que cada
+/// documento de referencia apareciera como algo pendiente de aprobar, y el ciclo de revisión
+/// —que es una de las funciones que el producto vende— dejaría de significar lo que significa.
+///
+/// Por eso acá no hay versiones: si el brief cambia, se sube otro archivo. Lo que necesita
+/// historia es lo que se entrega, no lo que se pidió.</summary>
+public class WorkItemAttachment : IOrganizationScoped
+{
+    public Guid OrganizationId { get; set; }
+
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid WorkItemId { get; set; }
+    public WorkItem? WorkItem { get; set; }
+
+    /// <summary>El nombre que le puso quien lo subió. Nunca toca el disco: la ruta la decide
+    /// `IFileStore`, porque un nombre de archivo que viene del cliente es una forma conocida de
+    /// escribir donde no corresponde.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    public string FilePath { get; set; } = string.Empty;
+    public string? ContentType { get; set; }
+    public long SizeBytes { get; set; }
+
+    public Guid? UploadedById { get; set; }
+    public User? UploadedBy { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 /// <summary>Una ampliación de tiempo sobre una tarea: cuántas horas más, por qué, y quién lo dijo.

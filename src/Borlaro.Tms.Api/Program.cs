@@ -317,6 +317,7 @@ app.MapPlatformEndpoints();
 app.MapMessageEndpoints();
 app.MapFeedEndpoints();
 app.MapSlackEndpoints();
+app.MapAttachmentEndpoints();
 app.MapTemplateEndpoints();
 app.MapActivityEndpoints();
 app.MapHub<AgentHub>("/hubs/agent");

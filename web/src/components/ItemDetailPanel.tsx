@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Bot, X, Loader2, Trash2 } from 'lucide-react'
 import { CustomFieldInput } from '@/components/CustomFieldInput'
 import { DeliverablesSection } from '@/components/DeliverablesSection'
+import { Attachments } from '@/components/Attachments'
 import { Markdown } from '@/components/Markdown'
 import {
   useDeleteItem,
@@ -400,6 +401,11 @@ export function ItemDetailPanel({
             />
           </div>
         </div>
+
+        <Attachments
+          itemId={item.id}
+          canEdit={project.permissions.canEditAnyWork || item.assigneeCanEdit}
+        />
 
         <TimeSection
           item={item}

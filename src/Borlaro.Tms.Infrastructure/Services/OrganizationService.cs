@@ -118,6 +118,10 @@ public class OrganizationService(BorlaroTmsDbContext db)
             .Select(v => v.FilePath!)
             .ToListAsync(ct);
 
+        // Los adjuntos van al mismo almacen que los entregables, asi que tambien dejan archivo
+        // huerfano si no se los junta aca.
+        archivos.AddRange(await db.WorkItemAttachments.Select(a => a.FilePath).ToListAsync(ct));
+
         if (organization.LogoPath is not null) archivos.Add(organization.LogoPath);
 
         // De hijas a madres. Cada línea es una tabla con OrganizationId; el orden lo dictan las
@@ -141,6 +145,7 @@ public class OrganizationService(BorlaroTmsDbContext db)
         // es de quienes cuelgan. Entraron con la migración de listas de responsables y quedaron
         // fuera de esta lista, y entonces borrar cualquier organización con proyectos fallaba por
         // clave foránea — exactamente el modo de falla que el `RESTRICT` está para provocar.
+        await db.WorkItemAttachments.ExecuteDeleteAsync(ct);
         await db.WorkItemTimeExtensions.ExecuteDeleteAsync(ct);
         await db.WorkItemStageAssignments.ExecuteDeleteAsync(ct);
         await db.StageResponsibles.ExecuteDeleteAsync(ct);
