@@ -724,4 +724,6 @@ export const es: Dictionary = {
   'item.descriptionEdit': 'Editar',
   'item.descriptionEmpty': 'Todavía no tiene descripción.',
   'item.descriptionPlaceholder': 'Qué hay que hacer, y lo que haga falta para entenderlo sin preguntar. Funciona Markdown: listas, enlaces, código.',
+  'people.slackId': 'Identificador de Slack',
+  'people.slackIdAuto': 'Se resuelve solo a partir de su email',
 }

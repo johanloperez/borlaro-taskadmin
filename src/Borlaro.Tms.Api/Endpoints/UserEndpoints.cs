@@ -28,6 +28,9 @@ public record AdminUserDto(
     bool CanCreateTasks,
     /// <summary>Por dónde prefiere recibir el check-in. Null = automático.</summary>
     NotificationChannel? PreferredChannel,
+    /// <summary>Quién es en Slack. Se resuelve solo por email la primera vez que hace falta; se
+    /// muestra para poder corregirlo cuando los emails no coinciden entre los dos lados.</summary>
+    string? SlackUserId,
     int OpenItems,
     DateTimeOffset CreatedAt,
     /// <summary>False en las cuentas que entran solo por el proveedor externo.</summary>
@@ -63,7 +66,8 @@ public record EditUserBody(
     /// <summary>Canal preferido. `ClearPreferredChannel` es lo que permite volver a automático:
     /// con solo el nulable no se distingue «no lo mandé» de «lo quiero vacío».</summary>
     NotificationChannel? PreferredChannel = null,
-    bool ClearPreferredChannel = false);
+    bool ClearPreferredChannel = false,
+    string? SlackUserId = null);
 
 public record NewPasswordBody([Required] string Password);
 
@@ -92,6 +96,7 @@ public static class UserEndpoints
                     u.Id, u.Email, u.Name, u.Role, u.IsActive, u.TimeZoneId, u.CheckInTime,
                     u.WorkDaysMask, u.CheckInsEnabled,
                     u.CanAssignTasks, u.CanSetDueDate, u.CanCreateTasks, u.PreferredChannel,
+                    u.SlackUserId,
                     db.WorkItems.Count(i => i.AssigneeId == u.Id && i.ClosedAt == null),
                     u.CreatedAt,
                     u.PasswordHash != "",
@@ -259,6 +264,15 @@ public static class UserEndpoints
 
             // El correo no es un canal personal: es el último recurso de la escalera, y elegirlo
             // como preferido dejaría a alguien sin los dos primeros peldaños sin querer.
+            // Vacío vuelve a automático: se borra el vínculo y el canal lo resuelve de nuevo por
+            // email la próxima vez, que es la salida cuando alguien quedó mal vinculado.
+            if (body.SlackUserId is not null)
+            {
+                user.SlackUserId = string.IsNullOrWhiteSpace(body.SlackUserId)
+                    ? null
+                    : body.SlackUserId.Trim();
+            }
+
             if (body.ClearPreferredChannel) user.PreferredChannel = null;
             else if (body.PreferredChannel is { } canal)
             {
@@ -456,6 +470,7 @@ public static class UserEndpoints
                 u.Id, u.Email, u.Name, u.Role, u.IsActive, u.TimeZoneId, u.CheckInTime,
                 u.WorkDaysMask, u.CheckInsEnabled,
                 u.CanAssignTasks, u.CanSetDueDate, u.CanCreateTasks, u.PreferredChannel,
+                u.SlackUserId,
                 db.WorkItems.Count(i => i.AssigneeId == u.Id && i.ClosedAt == null),
                 u.CreatedAt,
                 u.PasswordHash != "",

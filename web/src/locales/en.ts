@@ -724,4 +724,6 @@ export const en = {
   'item.descriptionEdit': 'Edit',
   'item.descriptionEmpty': 'No description yet.',
   'item.descriptionPlaceholder': 'What has to be done, and anything needed to understand it without asking. Markdown works: lists, links, code.',
+  'people.slackId': 'Slack user ID',
+  'people.slackIdAuto': 'Resolved automatically from their email',
 }

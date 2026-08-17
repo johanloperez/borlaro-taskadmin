@@ -910,14 +910,29 @@ Si alguna vez hace falta un cliente nativo —una empresa que no use Slack ni Te
 
 **El canal es de la persona, no del proyecto.** Aunque los proyectos tiendan a agrupar sistemas operativos, la misma persona está en varios proyectos y sigue teniendo una sola computadora. Por eso `PreferredChannel` vive en `Users` y no en `Projects`.
 
-**Qué falta para Slack, en orden:**
+### Slack, construido
 
-1. `SlackChannel : INotificationChannel` — entrega por mensaje directo del bot. Es la parte fácil: la escalera ya no necesita enterarse.
-2. **La vuelta**, que es la difícil: endpoint público para Events API, verificación de la firma de Slack, y mapear «este usuario de Slack es esta persona». Nada de eso se comparte entre proveedores.
-3. Vincular la cuenta: una persona tiene que poder decir «este soy yo en Slack», y hasta que no lo haga su canal Slack no puede entregar.
-4. Teams después, reusando 1 y 3 con su propio proveedor.
+**La ida.** `SlackChannel : INotificationChannel` manda por `chat.postMessage`. Registrarlo fue todo lo que hizo falta para que la escalera lo use: los dos primeros peldaños prueban los canales personales en orden y toman el primero que pueda entregar. Sin token configurado responde que no puede y la escalera sigue de largo.
 
-**Dos requisitos que no son de código:** las credenciales de la app de Slack —bot token y signing secret, que van cifradas en Configuración— y una **URL pública y estable** para los webhooks, que hoy la instalación no tiene porque vive detrás de Caddy en una red doméstica.
+Un detalle que no es obvio: **Slack contesta 200 con `ok:false` cuando algo falla.** Mirar el código HTTP no alcanza — con un token revocado, la entrega se vería exitosa y la escalera se detendría creyendo que la persona ya fue avisada.
+
+**Las credenciales son por organización**, como el SMTP: cada empresa tiene su propio workspace, y una configuración global haría que los check-ins de una salieran por el bot de la otra. `Slack:BotToken` y `Slack:SigningSecret`, los dos cifrados, resueltos en cada uso para que cargarlos alcance sin reiniciar nada.
+
+**El vínculo se resuelve solo.** `Users.SlackUserId` se completa preguntándole a Slack por el email de trabajo la primera vez que hace falta, porque en la mayoría de las empresas es el mismo de los dos lados. Pedirle a un administrador que copie treinta identificadores a mano sería la clase de tarea que nadie termina, y un canal a medias vinculado es peor que ninguno. Se puede corregir desde Personas cuando los emails no coinciden.
+
+**La vuelta** vive en `POST /api/slack/events`, y es **la segunda superficie anónima con escritura del sistema** después del formulario de intake. Por eso está acotada igual de fuerte:
+
+- **Sin firma válida no se procesa nada.** HMAC-SHA256 sobre el cuerpo **crudo** —volver a serializar cambia espacios y orden, y la firma deja de coincidir por algo que no tiene que ver con la seguridad— comparado en tiempo constante, porque comparar con `==` corta en el primer byte distinto y ese tiempo alcanza para adivinar la firma.
+- **Con tolerancia de reloj de 5 minutos**, o un pedido capturado se puede repetir para siempre y el agente escribiría dos veces lo mismo.
+- **Qué organización firmó no viaja en el evento**, así que se prueban los secretos configurados y gana el que valide. Si ninguno lo hace, no vino de ningún workspace nuestro.
+- **Se ignoran los mensajes del propio bot.** Sin ese corte, lo que el agente acaba de mandar vuelve como evento y se contestaría a sí mismo en un bucle.
+- Lo único que un evento puede hacer es **responder un check-in abierto de quien lo mandó**. Sin check-in abierto se ignora en silencio: escribirle porque escribió convertiría el canal en un chat general, y el agente solo existe para el check-in.
+
+✅ **Construido y verificado**: compila, la migración se aplicó sobre la base real y el endpoint rechaza con 401 tanto un pedido sin firma como uno con firma falsa.
+
+⏳ **Pendiente, y ninguna es de código:** crear la app de Slack en el workspace y cargar sus dos credenciales, y confirmar que Slack llega a `https://tms.borlaro.com/api/slack/events`. Recién con eso se puede probar el ciclo completo: que el check-in llegue por Slack, que la respuesta entre al bucle y que las diez herramientas escriban en el tablero.
+
+⏳ **Teams**, después, reusando la escalera y el vínculo pero con su propio proveedor y su propio esquema de firma.
 
 ✅ **Construido y verificado**: la escalera resuelve el canal por persona; `Users.PreferredChannel` con su selector en Personas, y el correo rechazado como preferido. Migración aplicada sobre la base real, incluido el renombre de los peldaños ya guardados —dos filas de `FirstDesktopToast` pasaron a `FirstDirectPing`— sin romper el historial de entregas. La API arranca sin errores.
 

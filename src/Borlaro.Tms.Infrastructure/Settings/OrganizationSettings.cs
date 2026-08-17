@@ -96,4 +96,34 @@ public class OrganizationSettings(BorlaroTmsDbContext db, IConfiguration configu
 
         return options;
     }
+
+    /// <summary>Las credenciales de Slack de esta organización. Como el SMTP, se resuelven en
+    /// cada uso y no al arrancar: cargar el token desde la pantalla de Configuración tiene que
+    /// alcanzar para que el próximo check-in salga por Slack, sin reiniciar nada.</summary>
+    public async Task<SlackOptions> SlackAsync(CancellationToken ct = default)
+    {
+        var overrides = await OverridesAsync(ct);
+
+        string? Read(string key) =>
+            overrides.TryGetValue(key, out var value) ? value : configuration[key];
+
+        var options = new SlackOptions();
+        configuration.GetSection(SlackOptions.SectionName).Bind(options);
+
+        // Token y secreto se leen juntos y de la misma fuente: son las dos mitades de la misma
+        // app de Slack, y mezclar el token de una empresa con el secreto de otra deja los envíos
+        // saliendo por un workspace y las respuestas rechazadas por firma inválida.
+        if (overrides.ContainsKey("Slack:BotToken"))
+        {
+            options.BotToken = overrides.GetValueOrDefault("Slack:BotToken");
+            options.SigningSecret = overrides.GetValueOrDefault("Slack:SigningSecret");
+        }
+        else
+        {
+            if (Read("Slack:BotToken") is { } token) options.BotToken = token;
+            if (Read("Slack:SigningSecret") is { } secret) options.SigningSecret = secret;
+        }
+
+        return options;
+    }
 }

@@ -39,6 +39,7 @@ public static class SettingsCatalog
     public const string CheckInsGroup = "Check-ins";
     public const string LadderGroup = "Escalera de entrega";
     public const string EmailGroup = "Email";
+    public const string SlackGroup = "Slack";
     public const string ModelGroup = "Modelo de IA";
     public const string StorageGroup = "Almacenamiento";
     public const string LinksGroup = "Enlaces";
@@ -106,6 +107,19 @@ public static class SettingsCatalog
         new("Email:Password", EmailGroup, "Contraseña", "Se guarda cifrada y nunca se devuelve.", SettingKind.Secret),
         new("Email:FromAddress", EmailGroup, "Remitente", "Dirección desde la que salen los avisos.", SettingKind.Text),
         new("Email:FromName", EmailGroup, "Nombre del remitente", "Cómo se ve en la bandeja de quien recibe.", SettingKind.Text),
+
+        // Slack como canal del agente. Van acá y no en el `.env` por lo mismo que el SMTP: una
+        // empresa que se suma tiene que poder conectar su workspace sin pedirle acceso al
+        // servidor a nadie. Los dos son secretos, así que se guardan cifrados y no se devuelven.
+        new("Slack:BotToken", SlackGroup, "Token del bot",
+            "Empieza con xoxb-. Vacío = Slack apagado: la escalera usa los demás canales. " +
+            "Se obtiene al crear la app de Slack, en OAuth & Permissions.",
+            SettingKind.Secret),
+
+        new("Slack:SigningSecret", SlackGroup, "Signing secret",
+            "Con esto se verifica que cada evento venga de Slack y no de cualquiera que conozca " +
+            "la URL. Sin secreto cargado no se acepta ninguna respuesta. Está en Basic Information.",
+            SettingKind.Secret),
 
         new("Email:PickupDirectory", EmailGroup, "Carpeta del modo disco",
             "Dónde se escriben los .eml cuando no hay SMTP configurado.", SettingKind.Text),
@@ -219,6 +233,10 @@ public static class SettingsCatalog
             // El modelo y el SMTP son los dos que una empresa querría cambiar: para apuntar el
             // agente a su propio Ollama, o para que los avisos salgan desde su dominio.
             "agentmodel" or "email" => SettingScope.Organization,
+
+            // Slack es de cada empresa: cada una tiene su propio workspace y su propia app. Una
+            // configuración global haría que los check-ins de una salieran por el bot de la otra.
+            "slack" => SettingScope.Organization,
 
             // Cuándo y cómo se le habla a la gente: horarios, días laborables, los peldaños de la
             // escalera. Cada equipo trabaja distinto.

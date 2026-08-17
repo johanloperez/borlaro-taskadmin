@@ -136,6 +136,12 @@ builder.Services.AddScoped<IBoardEvents, SignalRBoardEvents>();
 // escalera dejaría de ser la que se configura.
 builder.Services.AddScoped<EmailChannel>();
 builder.Services.AddScoped<INotificationChannel>(sp => sp.GetRequiredService<EmailChannel>());
+
+// Slack. Registrarlo es todo lo que hizo falta para que la escalera lo use: los dos primeros
+// peldanos prueban los canales personales en orden y toman el primero que pueda entregar (§20).
+// Sin token configurado responde que no puede, y la escalera sigue de largo.
+builder.Services.AddScoped<SlackChannel>();
+builder.Services.AddScoped<INotificationChannel>(sp => sp.GetRequiredService<SlackChannel>());
 builder.Services.AddScoped<EscalationService>();
 
 // El aviso de relevo: cuando una tarea cambia de manos al pasar de etapa. Es otra cosa que la
@@ -307,6 +313,7 @@ app.MapSettingsEndpoints();
 app.MapPlatformEndpoints();
 app.MapMessageEndpoints();
 app.MapFeedEndpoints();
+app.MapSlackEndpoints();
 app.MapTemplateEndpoints();
 app.MapActivityEndpoints();
 app.MapHub<AgentHub>("/hubs/agent");

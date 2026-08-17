@@ -68,6 +68,7 @@ y [§9 del plan](docs/PLAN.md).
 | Estimación original + ampliaciones anulables, dificultad, `add_time_estimate` | ⚠️ desplegado y migrado; sin probar en uso — [§19](docs/PLAN.md) |
 | Novedades del líder: `/novedades`, campana y las 6 clases de aviso | ⚠️ desplegado; sin probar en uso — [§19](docs/PLAN.md) |
 | Permisos por persona: asignar, fijar fechas, crear tareas | ⚠️ desplegado; sin probar en uso — [§19](docs/PLAN.md) |
+| Canal Slack: entrega, vínculo por email y respuestas por Events API | ⚠️ desplegado; falta crear la app de Slack — [§20](docs/PLAN.md) |
 | Nombre y logo de la organización en la sesión | ✅ |
 | Manual para quien usa la plataforma, servido en `/manual` | ✅ probado |
 | Conversación contra Claude (`ANTHROPIC_API_KEY`) | ⚠️ sin clave, sin probar |

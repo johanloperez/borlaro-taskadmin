@@ -246,6 +246,26 @@ function UserRow({ user }: { user: AdminUser }) {
               <option value="Slack">{t('people.channelSlack')}</option>
             </select>
             <p className="text-[11px] text-ink-subtle">{t('people.channelHelp')}</p>
+
+            {/* El vínculo con Slack se resuelve solo por email la primera vez que hace falta.
+                Se muestra igual, porque cuando el email de trabajo no coincide con el de Slack
+                —pasa— no hay ninguna otra forma de darse cuenta ni de arreglarlo. */}
+            {user.preferredChannel === 'Slack' && (
+              <label className="mt-1 block text-[11px] text-ink-subtle">
+                {t('people.slackId')}
+                <input
+                  defaultValue={user.slackUserId ?? ''}
+                  onBlur={(e) => {
+                    const valor = e.target.value.trim()
+                    if (valor !== (user.slackUserId ?? '')) {
+                      run(edit.mutateAsync({ id: user.id, slackUserId: valor }))
+                    }
+                  }}
+                  placeholder={t('people.slackIdAuto')}
+                  className="mt-0.5 h-8 w-full rounded-lg border border-line bg-canvas px-2 text-sm"
+                />
+              </label>
+            )}
           </div>
 
           {/* Los tres permisos por persona. Se comprueban además del permiso sobre el proyecto:

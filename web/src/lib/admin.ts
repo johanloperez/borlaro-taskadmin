@@ -20,6 +20,8 @@ export interface AdminUser {
   /** Por dónde prefiere recibir el check-in. Null = automático. El correo no es una opción: es
    *  el último recurso de la escalera, no un canal personal. */
   preferredChannel: 'Desktop' | 'Slack' | null
+  /** Quién es en Slack. Se resuelve solo por email; se edita cuando los emails no coinciden. */
+  slackUserId: string | null
   openItems: number
   createdAt: string
   /** False en las cuentas que entran solo por el proveedor externo. */

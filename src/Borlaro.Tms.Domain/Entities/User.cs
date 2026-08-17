@@ -53,6 +53,19 @@ public class User : IOrganizationScoped
     /// El correo nunca se elige acá: no es un canal personal sino el último recurso de todos.</summary>
     public NotificationChannel? PreferredChannel { get; set; }
 
+    /// <summary>Quién es esta persona dentro del workspace de Slack (`U01234ABCDE`).
+    ///
+    /// Nulo mientras no se haya vinculado, y entonces el canal de Slack responde que no puede
+    /// entregar y la escalera lo saltea sola — que es exactamente lo que tiene que pasar: alguien
+    /// sin Slack no puede quedarse sin check-in por eso.
+    ///
+    /// Se resuelve solo a partir del email de trabajo la primera vez que hace falta, porque en la
+    /// mayoría de las empresas es el mismo de los dos lados. Pedirle a un administrador que copie
+    /// treinta identificadores a mano sería el tipo de tarea que nadie termina, y un canal a
+    /// medias vinculado es peor que ninguno. Se puede corregir a mano cuando los emails no
+    /// coinciden.</summary>
+    public string? SlackUserId { get; set; }
+
     /// <summary>Puede asignar tareas a otros o cambiar asignaciones.
     ///
     /// Se suma al permiso del proyecto —hay que liderarlo *y* tener esto— y arranca en `true`
